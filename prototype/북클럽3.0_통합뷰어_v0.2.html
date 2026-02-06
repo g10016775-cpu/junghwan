@@ -12,6 +12,44 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
 html,body,#root{width:100%;height:100%;overflow:hidden;background:#fff}
+.textLayer{position:absolute;top:0;left:0;right:0;bottom:0;z-index:2;overflow:hidden;line-height:1;opacity:0;pointer-events:none;transition:opacity .2s}
+.textLayer.active{opacity:1;pointer-events:auto}
+.textLayer>span{color:transparent;position:absolute;cursor:pointer;white-space:pre}
+.textLayer::selection,.textLayer>span::selection{background:transparent}
+.highlightLayer{position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;pointer-events:none;overflow:hidden}
+.hl-rect{position:absolute;background:rgba(255,237,74,0.35);mix-blend-mode:multiply;border-radius:2px}
+.ul-rect{position:absolute;background:transparent;border-bottom:2.5px solid #FF6B6B}
+.pen-indicator{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(59,130,246,0.9);color:#fff;padding:4px 14px;border-radius:9999px;font-size:11px;font-weight:700;backdrop-filter:blur(8px);pointer-events:none}
+.word-popup{position:absolute;z-index:50;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);padding:16px;min-width:200px;max-width:280px}
+.word-popup .wp-word{font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.word-popup .wp-actions{display:flex;flex-direction:column;gap:8px}
+.word-popup .wp-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.word-popup .wp-btn:active{transform:scale(0.97)}
+.word-popup .wp-hl{background:#FFF9DB;color:#92710C}
+.word-popup .wp-hl:hover{background:#FFF3B0}
+.word-popup .wp-ul{background:#FFF0F0;color:#C53030}
+.word-popup .wp-ul:hover{background:#FFE0E0}
+.word-popup .wp-dict{background:#EBF5FF;color:#1E60A8}
+.word-popup .wp-dict:hover{background:#D6EBFF}
+.word-popup .wp-close{position:absolute;top:8px;right:10px;width:24px;height:24px;border:none;background:transparent;font-size:16px;color:#999;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.word-popup .wp-close:hover{background:#f0f0f0;color:#333}
+.dict-popup{position:absolute;z-index:50;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);padding:18px;width:300px;max-height:400px;overflow-y:auto}
+.dict-popup .dp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dict-popup .dp-word{font-size:18px;font-weight:800;color:#1a1a1a}
+.dict-popup .dp-phonetic{font-size:12px;color:#888;margin-top:2px}
+.dict-popup .dp-audio-btn{background:none;border:none;font-size:20px;cursor:pointer;padding:4px}
+.dict-popup .dp-close{width:28px;height:28px;border:none;background:#f0f0f0;font-size:14px;color:#666;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.dict-popup .dp-close:hover{background:#e0e0e0;color:#333}
+.dict-popup .dp-section{margin-bottom:10px}
+.dict-popup .dp-pos{font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;margin-bottom:4px}
+.dict-popup .dp-def{font-size:13px;color:#333;line-height:1.5;margin-bottom:2px;padding-left:8px}
+.dict-popup .dp-actions{display:flex;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #f0f0f0}
+.dict-popup .dp-action-btn{flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
+.dict-popup .dp-action-btn:active{transform:scale(0.97)}
+.dict-popup .dp-action-hl{background:#FFF9DB;color:#92710C}
+.dict-popup .dp-action-ul{background:#FFF0F0;color:#C53030}
+.dict-popup .dp-loading{text-align:center;padding:20px;color:#888;font-size:13px}
+.dict-popup .dp-error{text-align:center;padding:20px;color:#e53e3e;font-size:13px}
 </style>
 </head>
 <body>
@@ -127,6 +165,46 @@ function useSwipe(onLeft, onRight, { onDragStart, onTap } = {}) {
   };
 }
 
+
+/* ══════════════════════════════════════════════
+   PEN MODE UTILITIES
+   ══════════════════════════════════════════════ */
+function getWordAtPoint(span, clientX, clientY) {
+  const text = span.textContent;
+  if (!text || !text.trim()) return null;
+  const range = document.createRange();
+  for (let i = 0; i < text.length; i++) {
+    range.setStart(span.firstChild, i);
+    range.setEnd(span.firstChild, i + 1);
+    const rect = range.getBoundingClientRect();
+    if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+      let start = i, end = i;
+      while (start > 0 && /[a-zA-Z0-9'\u00C0-\u024F\uAC00-\uD7A3]/.test(text[start - 1])) start--;
+      while (end < text.length - 1 && /[a-zA-Z0-9'\u00C0-\u024F\uAC00-\uD7A3]/.test(text[end + 1])) end++;
+      const word = text.slice(start, end + 1).trim();
+      if (!word) return null;
+      range.setStart(span.firstChild, start);
+      range.setEnd(span.firstChild, end + 1);
+      const wordRect = range.getBoundingClientRect();
+      return { word, rect: wordRect, start, end: end + 1, spanText: text };
+    }
+  }
+  return null;
+}
+
+function loadHighlights(bookName) {
+  try {
+    const raw = localStorage.getItem('bc3_highlights_' + bookName);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+
+function saveHighlights(bookName, data) {
+  try {
+    localStorage.setItem('bc3_highlights_' + bookName, JSON.stringify(data));
+  } catch(e) {}
+}
+
 /* ══════════════════════════════════════════════
    FULLSCREEN UTIL
    ══════════════════════════════════════════════ */
@@ -159,6 +237,134 @@ function useFullscreen(ref) {
 }
 
 /* ══════════════════════════════════════════════
+   WORD POPUP — highlight / underline / dict
+   ══════════════════════════════════════════════ */
+function WordPopup({ word, rect, containerRect, onHighlight, onUnderline, onDict, onClose }) {
+  const popupRef = useRef(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!rect || !containerRect) return;
+    const pw = 220, ph = 160;
+    let top = rect.bottom - containerRect.top + 8;
+    let left = rect.left - containerRect.left + (rect.width / 2) - (pw / 2);
+    left = Math.max(8, Math.min(left, containerRect.width - pw - 8));
+    if (top + ph > containerRect.height) top = rect.top - containerRect.top - ph - 8;
+    setPos({ top, left });
+  }, [rect, containerRect]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) onClose();
+    };
+    setTimeout(() => document.addEventListener('pointerdown', handler), 50);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [onClose]);
+
+  return React.createElement('div', {
+    ref: popupRef,
+    className: 'word-popup',
+    style: { top: pos.top, left: pos.left },
+    onClick: e => e.stopPropagation()
+  },
+    React.createElement('button', { className: 'wp-close', onClick: onClose }, '✕'),
+    React.createElement('div', { className: 'wp-word' }, word),
+    React.createElement('div', { className: 'wp-actions' },
+      React.createElement('button', { className: 'wp-btn wp-hl', onClick: () => { onHighlight(); onClose(); } },
+        '🖍️', ' 형광펜'),
+      React.createElement('button', { className: 'wp-btn wp-ul', onClick: () => { onUnderline(); onClose(); } },
+        '▁▁', ' 밑줄'),
+      React.createElement('button', { className: 'wp-btn wp-dict', onClick: onDict },
+        '📖', ' 사전검색')
+    )
+  );
+}
+
+/* ══════════════════════════════════════════════
+   DICT POPUP — dictionary API result
+   ══════════════════════════════════════════════ */
+function DictPopup({ word, rect, containerRect, onHighlight, onUnderline, onClose }) {
+  const popupRef = useRef(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const [dictData, setDictData] = useState(null);
+  const [dictLoading, setDictLoading] = useState(true);
+  const [dictError, setDictError] = useState(null);
+
+  useEffect(() => {
+    if (!rect || !containerRect) return;
+    const pw = 300, ph = 300;
+    let top = rect.bottom - containerRect.top + 8;
+    let left = rect.left - containerRect.left + (rect.width / 2) - (pw / 2);
+    left = Math.max(8, Math.min(left, containerRect.width - pw - 8));
+    if (top + ph > containerRect.height) top = rect.top - containerRect.top - ph - 8;
+    setPos({ top, left });
+  }, [rect, containerRect]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDictLoading(true);
+    setDictError(null);
+    fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word))
+      .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
+      .then(data => { if (!cancelled) { setDictData(data[0]); setDictLoading(false); } })
+      .catch(() => { if (!cancelled) { setDictError('사전에서 찾을 수 없는 단어입니다.'); setDictLoading(false); } });
+    return () => { cancelled = true; };
+  }, [word]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) onClose();
+    };
+    setTimeout(() => document.addEventListener('pointerdown', handler), 50);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [onClose]);
+
+  const playAudio = () => {
+    if (!dictData) return;
+    const phonetics = dictData.phonetics || [];
+    const audioUrl = phonetics.find(p => p.audio)?.audio;
+    if (audioUrl) new Audio(audioUrl).play();
+  };
+
+  const meanings = dictData?.meanings || [];
+
+  return React.createElement('div', {
+    ref: popupRef,
+    className: 'dict-popup',
+    style: { top: pos.top, left: pos.left },
+    onClick: e => e.stopPropagation()
+  },
+    React.createElement('div', { className: 'dp-header' },
+      React.createElement('div', null,
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+          React.createElement('span', { className: 'dp-word' }, word),
+          dictData && dictData.phonetics?.some(p => p.audio) &&
+            React.createElement('button', { className: 'dp-audio-btn', onClick: playAudio, title: '발음 재생' }, '🔊')
+        ),
+        dictData?.phonetic && React.createElement('div', { className: 'dp-phonetic' }, dictData.phonetic)
+      ),
+      React.createElement('button', { className: 'dp-close', onClick: onClose }, '✕')
+    ),
+    dictLoading && React.createElement('div', { className: 'dp-loading' }, '검색 중...'),
+    dictError && React.createElement('div', { className: 'dp-error' }, dictError),
+    !dictLoading && !dictError && meanings.slice(0, 3).map((m, mi) =>
+      React.createElement('div', { key: mi, className: 'dp-section' },
+        React.createElement('div', { className: 'dp-pos' }, m.partOfSpeech),
+        m.definitions.slice(0, 2).map((d, di) =>
+          React.createElement('div', { key: di, className: 'dp-def' }, '• ' + d.definition)
+        )
+      )
+    ),
+    React.createElement('div', { className: 'dp-actions' },
+      React.createElement('button', { className: 'dp-action-btn dp-action-hl', onClick: () => { onHighlight(); onClose(); } },
+        '🖍️ 형광펜'),
+      React.createElement('button', { className: 'dp-action-btn dp-action-ul', onClick: () => { onUnderline(); onClose(); } },
+        '▁▁ 밑줄')
+    )
+  );
+}
+
+/* ══════════════════════════════════════════════
    PDF BOOK VIEWER — pdf.js canvas rendering
    ══════════════════════════════════════════════ */
 function PDFBookViewer({ fileData, fileName, onExit }) {
@@ -178,9 +384,19 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   const [viewMode, setViewMode] = useState('single'); // 'single' | 'spread'
   const [autoPlay, setAutoPlay] = useState(false);
   const [autoSpeed, setAutoSpeed] = useState(3);
+  const [autoSpeedOpen, setAutoSpeedOpen] = useState(false);
   const canvas2Ref = useRef(null);
   const renderTask2Ref = useRef(null);
   const autoTimerRef = useRef(null);
+
+  // ── Pen mode state ──
+  const [penMode, setPenMode] = useState(false);
+  const [wordPopup, setWordPopup] = useState(null);
+  const [dictPopup, setDictPopup] = useState(null);
+  const [highlights, setHighlights] = useState(() => loadHighlights(fileName));
+  const textLayerRef = useRef(null);
+  const highlightLayerRef = useRef(null);
+  const pageWrapperRef = useRef(null);
 
   const captureCurrentPage = useCallback(() => {
     if (canvasRef.current) return canvasRef.current.toDataURL('image/png');
@@ -272,12 +488,132 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
     return () => cancelAnimationFrame(frameId);
   }, [pdfDoc, loading, page, viewMode, totalPages, renderOnePage]);
 
+  // ── Render text layer for pen mode ──
+  useEffect(() => {
+    if (!pdfDoc || !penMode || !textLayerRef.current || !canvasRef.current) return;
+    const textDiv = textLayerRef.current;
+    textDiv.innerHTML = '';
+    const canvas = canvasRef.current;
+    const dpr = window.devicePixelRatio || 1;
+    const cw = parseFloat(canvas.style.width);
+    const ch = parseFloat(canvas.style.height);
+
+    pdfDoc.getPage(page).then(p => {
+      const vp0 = p.getViewport({ scale: 1 });
+      const fitScale = Math.min(cw / vp0.width, ch / vp0.height);
+      const vp = p.getViewport({ scale: fitScale });
+      textDiv.style.width = cw + 'px';
+      textDiv.style.height = ch + 'px';
+      const offX = (cw - vp.width) / 2;
+      const offY = (ch - vp.height) / 2;
+
+      return p.getTextContent().then(tc => {
+        tc.items.forEach((item, idx) => {
+          const tx = pdfjsLib.Util.transform(vp.transform, item.transform);
+          const span = document.createElement('span');
+          span.textContent = item.str;
+          const fh = Math.abs(tx[3]);
+          span.style.left = (tx[4] + offX) + 'px';
+          span.style.top = (ch - tx[5] - fh + offY) + 'px';
+          span.style.fontSize = fh + 'px';
+          span.style.fontFamily = item.fontName || 'sans-serif';
+          span.dataset.idx = idx;
+          textDiv.appendChild(span);
+        });
+      });
+    });
+  }, [pdfDoc, page, penMode]);
+
+  // ── Render highlight rectangles ──
+  useEffect(() => {
+    if (!highlightLayerRef.current || !canvasRef.current) return;
+    const hlDiv = highlightLayerRef.current;
+    hlDiv.innerHTML = '';
+    const pageHLs = highlights[page];
+    if (!pageHLs || !pageHLs.length) return;
+    const textDiv = textLayerRef.current;
+    if (!textDiv) return;
+
+    requestAnimationFrame(() => {
+      const spans = textDiv.querySelectorAll('span');
+      pageHLs.forEach(hl => {
+        const span = spans[hl.spanIdx];
+        if (!span || !span.firstChild) return;
+        try {
+          const range = document.createRange();
+          range.setStart(span.firstChild, Math.min(hl.start, span.textContent.length));
+          range.setEnd(span.firstChild, Math.min(hl.end, span.textContent.length));
+          const rects = range.getClientRects();
+          const containerRect = hlDiv.getBoundingClientRect();
+          for (let i = 0; i < rects.length; i++) {
+            const r = rects[i];
+            const div = document.createElement('div');
+            div.className = hl.type === 'underline' ? 'ul-rect' : 'hl-rect';
+            div.style.left = (r.left - containerRect.left) + 'px';
+            div.style.top = (r.top - containerRect.top) + 'px';
+            div.style.width = r.width + 'px';
+            div.style.height = r.height + 'px';
+            hlDiv.appendChild(div);
+          }
+        } catch(e) {}
+      });
+    });
+  }, [highlights, page, penMode]);
+
+  // ── Text layer click handler ──
+  const handleTextLayerClick = useCallback((e) => {
+    if (!penMode) return;
+    e.stopPropagation();
+    const target = e.target;
+    if (target.tagName !== 'SPAN' || !target.parentElement?.classList.contains('textLayer')) return;
+    const result = getWordAtPoint(target, e.clientX, e.clientY);
+    if (!result) return;
+    const cr = containerRef.current?.getBoundingClientRect();
+    if (!cr) return;
+    setDictPopup(null);
+    setWordPopup({
+      word: result.word,
+      rect: { top: result.rect.top, bottom: result.rect.bottom, left: result.rect.left, right: result.rect.right, width: result.rect.width, height: result.rect.height },
+      pageNum: page,
+      spanIdx: parseInt(target.dataset.idx),
+      start: result.start,
+      end: result.end
+    });
+  }, [penMode, page]);
+
+  // ── Add highlight / underline ──
+  const addMark = useCallback((type) => {
+    if (!wordPopup) return;
+    const { pageNum, spanIdx, start, end, word } = wordPopup;
+    setHighlights(prev => {
+      const next = { ...prev };
+      if (!next[pageNum]) next[pageNum] = [];
+      const exists = next[pageNum].some(h => h.spanIdx === spanIdx && h.start === start && h.end === end && h.type === type);
+      if (!exists) {
+        next[pageNum] = [...next[pageNum], { spanIdx, start, end, word, type }];
+      }
+      saveHighlights(fileName, next);
+      return next;
+    });
+  }, [wordPopup, fileName]);
+
+  // ── Toggle pen mode ──
+  const togglePenMode = useCallback(() => {
+    setPenMode(v => {
+      if (v) { setWordPopup(null); setDictPopup(null); }
+      return !v;
+    });
+  }, []);
+
   // Keyboard nav
   useEffect(() => {
     const h = e => {
       if (e.key === 'ArrowRight') goNext();
       else if (e.key === 'ArrowLeft') goPrev();
-      else if (e.key === 'Escape') onExit();
+      else if (e.key === 'Escape') {
+        if (penMode) { setPenMode(false); setWordPopup(null); setDictPopup(null); }
+        else onExit();
+      }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -354,7 +690,55 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
             <canvas ref={canvas2Ref} className="shadow-lg" />
           )}
         </div>
+
+        {/* Highlight & Text layers */}
+        <div ref={pageWrapperRef} style={{
+          position: 'absolute',
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: canvasRef.current ? canvasRef.current.style.width : '100%',
+          height: canvasRef.current ? canvasRef.current.style.height : '100%',
+          pointerEvents: 'none'
+        }}>
+          <div ref={highlightLayerRef} className="highlightLayer" />
+          <div ref={textLayerRef}
+               className={`textLayer ${penMode ? 'active' : ''}`}
+               onClick={handleTextLayerClick}
+               style={{ pointerEvents: penMode ? 'auto' : 'none' }} />
+        </div>
       </div>
+
+      {/* Pen mode indicator */}
+      {penMode && (
+        <div className="pen-indicator">🖊️ 펜 모드 ON</div>
+      )}
+
+      {/* Word popup */}
+      {penMode && wordPopup && !dictPopup && containerRef.current && (
+        <WordPopup
+          word={wordPopup.word}
+          rect={wordPopup.rect}
+          containerRect={containerRef.current.getBoundingClientRect()}
+          onHighlight={() => addMark('highlight')}
+          onUnderline={() => addMark('underline')}
+          onDict={() => {
+            setDictPopup({ word: wordPopup.word, rect: wordPopup.rect });
+          }}
+          onClose={() => setWordPopup(null)}
+        />
+      )}
+
+      {/* Dict popup */}
+      {penMode && dictPopup && containerRef.current && (
+        <DictPopup
+          word={dictPopup.word}
+          rect={dictPopup.rect}
+          containerRect={containerRef.current.getBoundingClientRect()}
+          onHighlight={() => addMark('highlight')}
+          onUnderline={() => addMark('underline')}
+          onClose={() => { setDictPopup(null); setWordPopup(null); }}
+        />
+      )}
 
       {/* Top bar */}
       <div className={`absolute top-0 inset-x-0 z-20 transition-all duration-300
@@ -393,56 +777,65 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
         </div>
       </div>
 
-      {/* ─── 뷰 모드 & 자동재생 툴바 ─── */}
-      <div className={`absolute bottom-[7.5rem] inset-x-0 z-20 flex justify-center transition-all duration-300
-        ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
-        <div className="flex items-center gap-2 bg-white/90 backdrop-blur rounded-full px-3 py-1.5 shadow-lg border border-gray-200"
-             onClick={e => e.stopPropagation()}>
-          {/* 단면 / 양면 */}
-          <div className="flex bg-gray-100 rounded-full p-0.5">
-            <button onClick={() => handleViewModeChange('single')}
-                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition ${viewMode==='single' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>
-              단면
-            </button>
-            <button onClick={() => handleViewModeChange('spread')}
-                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition ${viewMode==='spread' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>
-              양면
-            </button>
-          </div>
-          <div className="w-px h-5 bg-gray-200" />
-          {/* 자동재생 */}
-          <button onClick={() => setAutoPlay(a => !a)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-bold transition active:scale-95 ${autoPlay ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
-            {autoPlay ? '⏸ 정지' : '▶ 자동재생'}
-          </button>
-          {/* 속도 선택 */}
-          <div className="flex bg-gray-100 rounded-full p-0.5">
+      {/* ─── 자동재생 속도 선택 (버튼 클릭 시 펼침) ─── */}
+      {!autoPlay && autoSpeedOpen && (
+        <div className={`absolute bottom-[7.5rem] inset-x-0 z-20 flex justify-center transition-all duration-300
+          ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
+          <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur rounded-full px-3 py-1.5 shadow-lg border border-gray-200"
+               onClick={e => e.stopPropagation()}>
+            <span className="text-[10px] text-gray-500 font-semibold mr-1">속도</span>
             {[2, 3, 5, 8].map(s => (
-              <button key={s} onClick={() => setAutoSpeed(s)}
-                      className={`px-2 py-1 rounded-full text-[10px] font-bold transition ${autoSpeed===s ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>
+              <button key={s} onClick={() => { setAutoSpeed(s); setAutoPlay(true); setAutoSpeedOpen(false); }}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition active:scale-95 ${autoSpeed===s ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
                 {s}초
               </button>
             ))}
+            <button onClick={() => setAutoSpeedOpen(false)}
+                    className="px-2 py-1 rounded-full text-[10px] text-gray-400 hover:text-gray-600">
+              ✕
+            </button>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* ─── 도서 뷰어 액션 툴바 ─── */}
+      {/* ─── 도서 뷰어 액션 툴바 (한 줄) ─── */}
       <div className={`absolute bottom-16 inset-x-0 z-20 flex justify-center transition-all duration-300
         ${uiVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
-        <div className="flex gap-1.5 bg-white/90 backdrop-blur rounded-full px-2 py-1.5 shadow-lg border border-gray-200"
+        <div className="flex items-center gap-1 bg-white/90 backdrop-blur rounded-full px-2 py-1.5 shadow-lg border border-gray-200"
              onClick={e => e.stopPropagation()}>
+          {/* 단면/양면 */}
+          <div className="flex bg-gray-100 rounded-full p-0.5">
+            <button onClick={() => handleViewModeChange('single')}
+                    className={`px-2 py-1 rounded-full text-[10px] font-semibold transition ${viewMode==='single' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>
+              단면
+            </button>
+            <button onClick={() => handleViewModeChange('spread')}
+                    className={`px-2 py-1 rounded-full text-[10px] font-semibold transition ${viewMode==='spread' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}>
+              양면
+            </button>
+          </div>
+          <div className="w-px h-4 bg-gray-200" />
+          {/* 자동재생 */}
+          <button onClick={() => { if (autoPlay) { setAutoPlay(false); } else { setAutoSpeedOpen(o => !o); } }}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition active:scale-95 ${autoPlay ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600'}`}>
+            {autoPlay ? '⏸ 정지' : '▶ 자동'}
+          </button>
+          <div className="w-px h-4 bg-gray-200" />
           <button onClick={handleScreenCapture}
-                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition flex items-center gap-1">
-            📸 전체화면저장
+                  className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition">
+            📸 캡처
           </button>
           <button onClick={handleStartWrite}
-                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold text-white bg-blue-500 hover:bg-blue-600 active:scale-95 transition flex items-center gap-1">
-            ✏️ 감상문쓰기
+                  className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-white bg-blue-500 hover:bg-blue-600 active:scale-95 transition">
+            ✏️ 감상문 쓰기
           </button>
           <button onClick={handleOpenGallery}
-                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition flex items-center gap-1">
-            📖 감상문보기
+                  className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 active:scale-95 transition">
+            📖 감상문 보기
+          </button>
+          <button onClick={togglePenMode}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold active:scale-95 transition ${penMode ? 'text-white bg-blue-500 hover:bg-blue-600' : 'text-gray-600 bg-gray-100 hover:bg-gray-200'}`}>
+            🖊️ {penMode ? 'OFF' : '펜'}
           </button>
         </div>
       </div>
