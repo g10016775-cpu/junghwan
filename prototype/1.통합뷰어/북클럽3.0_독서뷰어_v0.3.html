@@ -1815,6 +1815,17 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   );
 }
 
+const SAMPLE_BOOKS = [
+  {
+    id: 'scholastic_3cats',
+    title: '3 Cats',
+    author: 'Scholastic',
+    isbn: '9789814983754',
+    dataId: 'scholastic_3cats',
+    fileName: '9789814983754_Scholastic_3 Cats.pdf',
+  },
+];
+
 function Launcher({ onSelect }) {
   const pdfRef = useRef(null);
   const [loadingType, setLoadingType] = useState(null);
