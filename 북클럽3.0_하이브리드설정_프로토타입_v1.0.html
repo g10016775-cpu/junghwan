@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>북클럽 3.0 하이브리드 설정 시스템 v2.0 (3단 컬럼)</title>
+<title>기존 북클럽 런처 설정</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -74,28 +74,13 @@ html,body,#root{width:100%;height:100%;overflow:hidden;background:#F5F5F5}
 const { useState } = React;
 
 /* ══════════════════════════════════════════════
-   사용자 타입 정의
+   기존 북클럽 런처 설정
    ══════════════════════════════════════════════ */
-const USER_TYPES = {
-  DEDICATED_PAD: {
-    id: 'dedicated',
-    name: '전용 패드 회원',
-    isWoongjinDevice: true,
-    description: '웅진 전용 패드 + 통합 멤버십'
-  },
-  PERSONAL_DEVICE: {
-    id: 'personal',
-    name: '개인 패드 회원',
-    isWoongjinDevice: false,
-    description: '홈페이지/앱 독립 구독'
-  }
-};
 
 /* ══════════════════════════════════════════════
    메인 앱
    ══════════════════════════════════════════════ */
 function App() {
-  const [currentType, setCurrentType] = useState(USER_TYPES.DEDICATED_PAD);
   const [brightness, setBrightness] = useState(70);
   const [volume, setVolume] = useState(50);
   const [bluetooth, setBluetooth] = useState(true);
@@ -105,10 +90,8 @@ function App() {
   const [passwordTarget, setPasswordTarget] = useState(null);
 
   const handleLockedMenuClick = (target) => {
-    if (currentType.isWoongjinDevice) {
-      setPasswordTarget(target);
-      setShowPasswordModal(true);
-    }
+    setPasswordTarget(target);
+    setShowPasswordModal(true);
   };
 
   const handlePasswordSubmit = (password) => {
@@ -131,7 +114,10 @@ function App() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-gray-900">설정</h1>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">설정</h1>
+            <p className="text-xs text-gray-500">기존 북클럽 런처</p>
+          </div>
         </div>
         <button
           onClick={() => handleLockedMenuClick('서비스 나가기')}
@@ -142,30 +128,10 @@ function App() {
         </button>
       </header>
 
-      {/* 타입 시뮬레이터 */}
-      <div className="px-6 py-3 bg-white border-b">
-        <div className="flex gap-2">
-          {Object.values(USER_TYPES).map((type) => (
-            <button
-              key={type.id}
-              onClick={() => setCurrentType(type)}
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${
-                currentType.id === type.id
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              {type.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* 메인 콘텐츠 */}
       <div className="flex-1 overflow-y-auto custom-scroll p-6">
-        {currentType.isWoongjinDevice ? (
-          // 전용 패드: 3단 컬럼 레이아웃
-          <div className="grid grid-cols-3 gap-6 max-w-7xl mx-auto">
+        {/* 3단 컬럼 레이아웃 */}
+        <div className="grid grid-cols-3 gap-6 max-w-7xl mx-auto">
             {/* 좌측 컬럼 */}
             <div className="space-y-4">
               {/* 배터리 */}
@@ -288,50 +254,8 @@ function App() {
               </Card>
             </div>
           </div>
-        ) : (
-          // 개인 패드: 단순 레이아웃
-          <div className="max-w-2xl mx-auto space-y-4">
-            <Card title="🎨 북클럽 3.0 전용 기능">
-              <SettingRow label="AI 독서 버디" toggle value={true} onChange={() => {}} />
-            </Card>
-
-            <Card title="👤 계정 관리">
-              <div className="text-sm text-gray-600 space-y-2">
-                <div>계정 정보 →</div>
-                <div>구독 관리 →</div>
-                <div className="text-red-500">계정 탈퇴 →</div>
-              </div>
-            </Card>
-
-            <Card title="💬 고객센터">
-              <div className="text-sm text-gray-600 space-y-2">
-                <div>자주 묻는 질문 →</div>
-                <div>1:1 문의 →</div>
-              </div>
-            </Card>
-
-            <Card title="📋 약관 및 정책">
-              <div className="text-sm text-gray-600 space-y-2">
-                <div>서비스 이용약관 →</div>
-                <div>개인정보 처리방침 →</div>
-              </div>
-            </Card>
-
-            <div className="text-center text-sm text-gray-400 py-4">
-              버전 1.0.0
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 하단 버튼 (개인 패드만) */}
-      {!currentType.isWoongjinDevice && (
-        <div className="px-6 py-4 bg-white border-t">
-          <button className="w-full px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg">
-            🚪 로그아웃
-          </button>
         </div>
-      )}
+      </div>
 
       {/* 비밀번호 모달 */}
       {showPasswordModal && (
