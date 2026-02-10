@@ -132,10 +132,6 @@ function App() {
   const [bluelight, setBluelight] = useState(true);
   const [wifi, setWifi] = useState(true);
 
-  // 학습 옵션 상태
-  const [learningMode, setLearningMode] = useState('standard');
-  const [krsAuto, setKrsAuto] = useState(true);
-
   // 앱 설정 상태
   const [notifications, setNotifications] = useState(true);
 
@@ -233,8 +229,6 @@ function App() {
           {/* 북클럽 3.0 전용 기능 (공통) */}
           <Section title="🎨 북클럽 3.0 전용 기능">
             <SettingItem label="AI 독서 버디" type="toggle" value={notifications} onChange={setNotifications} />
-            <SettingItem label="시선 추적 시력 보호" type="toggle" value={true} onChange={() => {}} />
-            <SettingItem label="자동 재생" type="toggle" value={false} onChange={() => {}} />
           </Section>
 
           {/* 기기 제어 (전용 패드 전용) */}
@@ -271,50 +265,6 @@ function App() {
               </div>
             </Section>
           )}
-
-          {/* 학습 옵션 */}
-          <Section
-            title={currentType.isWoongjinDevice ? "📚 학습 옵션" : "📚 학습 현황"}
-            locked={currentType.isWoongjinDevice}
-            onLockedClick={() => handleLockedMenuClick('학습 옵션')}
-            className="anim-slide-in"
-          >
-            {currentType.isWoongjinDevice ? (
-              <>
-                <div className="mb-4">
-                  <div className="text-sm font-medium text-gray-700 mb-2">학습 모드</div>
-                  <div className="flex gap-2">
-                    {['easy', 'standard', 'hard'].map((mode) => (
-                      <button
-                        key={mode}
-                        onClick={() => setLearningMode(mode)}
-                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                          learningMode === mode
-                            ? 'bg-gradient-to-r from-orange-400 to-yellow-400 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {mode === 'easy' ? '😊 쉬움' : mode === 'standard' ? '😎 보통' : '🤓 어려움'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <SettingItem label="KRS 자동 조정" type="toggle" value={krsAuto} onChange={setKrsAuto} />
-                <div className="text-sm text-gray-500 mt-2">학습 리포트 →</div>
-              </>
-            ) : (
-              <div className="text-sm text-gray-600 space-y-2">
-                <div className="flex justify-between">
-                  <span>이번 주 독서</span>
-                  <span className="font-semibold">3권</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>총 학습 시간</span>
-                  <span className="font-semibold">2시간 30분</span>
-                </div>
-              </div>
-            )}
-          </Section>
 
           {/* 앱 설정 (공통) */}
           <Section title="🔔 앱 설정">
