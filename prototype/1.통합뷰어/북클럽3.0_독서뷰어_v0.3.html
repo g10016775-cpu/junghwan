@@ -1850,6 +1850,10 @@ function Launcher({ onSelect }) {
     }
   };
 
+  useEffect(() => {
+    handleSampleBook(SAMPLE_BOOKS[0]);
+  }, []);
+
   const modes = [
     { id: 'pdf', label: '도서 읽기', sub: 'AI 독서 동반자', icon: '📖', action: () => handleSampleBook(SAMPLE_BOOKS[0]) },
   ];
