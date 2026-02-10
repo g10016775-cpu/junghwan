@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>북클럽 3.0 통합검색 시스템 v1.0</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body,#root{width:100%;height:100%;overflow:hidden;background:#F8FAFC}
+
+@keyframes slide-up{0%{transform:translateY(20px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes fade-in{0%{opacity:0}100%{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+.anim-slide-up{animation:slide-up 0.3s ease-out both}
+.anim-fade-in{animation:fade-in 0.2s ease-out both}
+.search-result{transition:all 0.2s ease;border:2px solid transparent}
+.search-result:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.1);border-color:#3B82F6}
+
+.autocomplete-item{transition:all 0.15s ease}
+.autocomplete-item:hover{background:#EFF6FF}
+.autocomplete-item.active{background:#DBEAFE}
+
+.filter-chip{transition:all 0.2s ease}
+.filter-chip:hover{transform:scale(1.05)}
+
+/* 커스텀 스크롤바 */
+.custom-scroll::-webkit-scrollbar{width:8px;height:8px}
+.custom-scroll::-webkit-scrollbar-track{background:#F1F5F9;border-radius:10px}
+.custom-scroll::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:10px}
+.custom-scroll::-webkit-scrollbar-thumb:hover{background:#94A3B8}
+
+/* KRS 레벨 배지 */
+.krs-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:2px 8px;
+  border-radius:12px;
+  font-size:11px;
+  font-weight:600;
+}
+.krs-1{background:#FEE2E2;color:#991B1B}
+.krs-2{background:#FED7AA;color:#9A3412}
+.krs-3{background:#FEF3C7;color:#92400E}
+.krs-4{background:#D1FAE5;color:#065F46}
+.krs-5{background:#DBEAFE;color:#1E40AF}
+
+/* 로딩 스피너 */
+.spinner{
+  border:3px solid #F1F5F9;
+  border-top-color:#3B82F6;
+  border-radius:50%;
+  width:24px;
+  height:24px;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 초성 하이라이트 */
+.chosung-highlight{
+  background:linear-gradient(120deg,#FEF3C7 0%,#FDE68A 100%);
+  padding:0 2px;
+  border-radius:2px;
+  font-weight:600;
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useMemo} = React;
+
+/* ══════════════════════════════════════════════
+   샘플 데이터 (실제로는 OpenSearch에서 가져옴)
+   ══════════════════════════════════════════════ */
+const SAMPLE_BOOKS = [
+  {id:1, title:'신비아파트', author:'서울문화사', publisher:'서울문화사', genre:'만화', krsLevel:3, ageMin:7, ageMax:10, series:'신비아파트', cover:'📚', rating:4.8, reviews:1234, popularity:95},
+  {id:2, title:'신비한 마법의 성', author:'김마법', publisher:'마법출판사', genre:'판타지', krsLevel:3, ageMin:8, ageMax:11, series:null, cover:'🏰', rating:4.5, reviews:567, popularity:78},
+  {id:3, title:'또봇', author:'레트로봇', publisher:'영실업', genre:'만화', krsLevel:3, ageMin:5, ageMax:8, series:'또봇', cover:'🤖', rating:4.7, reviews:890, popularity:88},
+  {id:4, title:'타요 버스', author:'아이코닉스', publisher:'키즈랜드', genre:'동화', krsLevel:2, ageMin:3, ageMax:6, series:'타요', cover:'🚌', rating:4.9, reviews:2345, popularity:92},
+  {id:5, title:'공룡 대탐험', author:'김공룡', publisher:'과학나라', genre:'과학', krsLevel:4, ageMin:9, ageMax:12, series:null, cover:'🦕', rating:4.6, reviews:456, popularity:72},
+  {id:6, title:'심쿵 바다 여행', author:'이바다', publisher:'바다출판', genre:'동화', krsLevel:2, ageMin:4, ageMax:7, series:null, cover:'🐠', rating:4.4, reviews:321, popularity:65},
+  {id:7, title:'모험왕 탐험대', author:'박모험', publisher:'탐험출판', genre:'모험', krsLevel:3, ageMin:8, ageMax:11, series:'모험왕', cover:'🗺️', rating:4.7, reviews:678, popularity:81},
+  {id:8, title:'숲속 친구들', author:'최나무', publisher:'숲출판사', genre:'동화', krsLevel:2, ageMin:4, ageMax:7, series:null, cover:'🌲', rating:4.8, reviews:543, popularity:76},
+  {id:9, title:'우주 탐험', author:'강우주', publisher:'우주과학', genre:'과학', krsLevel:5, ageMin:10, ageMax:13, series:'우주탐험', cover:'🚀', rating:4.5, reviews:234, popularity:68},
+  {id:10, title:'마법 학교', author:'정마법', publisher:'마법출판', genre:'판타지', krsLevel:4, ageMin:9, ageMax:12, series:'마법학교', cover:'🧙', rating:4.9, reviews:1567, popularity:89},
+  {id:11, title:'신비한 동물원', author:'이동물', publisher:'동물나라', genre:'동화', krsLevel:3, ageMin:6, ageMax:9, series:null, cover:'🦁', rating:4.6, reviews:432, popularity:73},
+  {id:12, title:'로봇 친구', author:'김로봇', publisher:'로봇공학', genre:'과학', krsLevel:3, ageMin:7, ageMax:10, series:'로봇친구', cover:'🤖', rating:4.7, reviews:765, popularity:82},
+];
+
+// 초성 추출 함수
+const extractChosung = (str) => {
+  const cho = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  return str.split('').map(char => {
+    const code = char.charCodeAt(0) - 0xAC00;
+    if (code > -1 && code < 11172) return cho[Math.floor(code / 588)];
+    return char;
+  }).join('');
+};
+
+// 검색 매칭 함수 (초성, 부분일치, Fuzzy)
+const matchSearch = (book, query) => {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  const title = book.title.toLowerCase();
+  const author = book.author.toLowerCase();
+  const chosung = extractChosung(book.title);
+
+  // 1. 제목 정확 매칭
+  if (title.includes(q)) return {match:true, score:100, type:'exact'};
+
+  // 2. 초성 매칭
+  if (chosung.includes(q)) return {match:true, score:80, type:'chosung'};
+
+  // 3. 저자 매칭
+  if (author.includes(q)) return {match:true, score:60, type:'author'};
+
+  // 4. 부분 매칭 (2글자 이상)
+  if (q.length >= 2) {
+    for(let i = 0; i < title.length - 1; i++) {
+      if (title.slice(i, i+q.length) === q) {
+        return {match:true, score:70, type:'partial'};
+      }
+    }
+  }
+
+  // 5. Fuzzy 매칭 (간단한 Edit Distance)
+  if (q.length >= 3 && editDistance(title, q) <= 2) {
+    return {match:true, score:50, type:'fuzzy'};
+  }
+
+  return {match:false, score:0, type:null};
+};
+
+// 간단한 Edit Distance (Levenshtein)
+const editDistance = (a, b) => {
+  const matrix = [];
+  for(let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for(let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for(let i = 1; i <= b.length; i++) {
+    for(let j = 1; j <= a.length; j++) {
+      if(b.charAt(i-1) === a.charAt(j-1)) {
+        matrix[i][j] = matrix[i-1][j-1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i-1][j-1] + 1,
+          matrix[i][j-1] + 1,
+          matrix[i-1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+};
+
+/* ══════════════════════════════════════════════
+   메인 검색 컴포넌트
+   ══════════════════════════════════════════════ */
+function SearchApp() {
+  const [query, setQuery] = useState('');
+  const [userKrs, setUserKrs] = useState(3);
+  const [krsFilterOn, setKrsFilterOn] = useState(true);
+  const [sortBy, setSortBy] = useState('relevance'); // relevance, latest, popular
+  const [genreFilter, setGenreFilter] = useState('all');
+  const [loading, setLoading] = useState(false);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
+  const [searchHistory, setSearchHistory] = useState(['신비아파트', '또봇']);
+
+  const inputRef = useRef(null);
+
+  // 검색 결과 계산
+  const searchResults = useMemo(() => {
+    if (!query && genreFilter === 'all') {
+      // 초기 화면: 인기 도서
+      return SAMPLE_BOOKS
+        .sort((a,b) => b.popularity - a.popularity)
+        .slice(0, 12);
+    }
+
+    // 검색어 매칭
+    let results = SAMPLE_BOOKS
+      .map(book => ({
+        ...book,
+        matchInfo: matchSearch(book, query)
+      }))
+      .filter(book => book.matchInfo.match);
+
+    // 장르 필터
+    if (genreFilter !== 'all') {
+      results = results.filter(book => book.genre === genreFilter);
+    }
+
+    // KRS 필터
+    if (krsFilterOn) {
+      results = results.filter(book =>
+        book.krsLevel >= userKrs - 1 && book.krsLevel <= userKrs + 1
+      );
+    }
+
+    // KRS 부스팅 스코어 계산
+    results = results.map(book => {
+      let finalScore = book.matchInfo.score;
+
+      // KRS 레벨 부스팅
+      if (book.krsLevel === userKrs) {
+        finalScore *= 2.0; // 정확 매칭
+      } else if (Math.abs(book.krsLevel - userKrs) === 1) {
+        finalScore *= 1.5; // ±1 범위
+      }
+
+      // 인기도 가중치
+      finalScore += book.popularity * 0.1;
+
+      return {...book, finalScore};
+    });
+
+    // 정렬
+    if (sortBy === 'relevance') {
+      results.sort((a,b) => b.finalScore - a.finalScore);
+    } else if (sortBy === 'latest') {
+      results.sort((a,b) => b.id - a.id);
+    } else if (sortBy === 'popular') {
+      results.sort((a,b) => b.popularity - a.popularity);
+    }
+
+    return results;
+  }, [query, userKrs, krsFilterOn, sortBy, genreFilter]);
+
+  // 자동완성 제안
+  const autocompleteSuggestions = useMemo(() => {
+    if (!query || query.length < 1) return [];
+
+    const suggestions = SAMPLE_BOOKS
+      .map(book => {
+        const match = matchSearch(book, query);
+        return match.match ? {title: book.title, type: match.type, score: match.score} : null;
+      })
+      .filter(Boolean)
+      .sort((a,b) => b.score - a.score)
+      .slice(0, 5);
+
+    return suggestions;
+  }, [query]);
+
+  // 검색 실행
+  const handleSearch = (searchQuery) => {
+    setLoading(true);
+    setShowAutocomplete(false);
+
+    // 검색 히스토리 추가
+    if (searchQuery && !searchHistory.includes(searchQuery)) {
+      setSearchHistory(prev => [searchQuery, ...prev].slice(0, 5));
+    }
+
+    setTimeout(() => setLoading(false), 300);
+  };
+
+  // 키보드 이벤트
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      if (autocompleteIndex >= 0 && autocompleteSuggestions[autocompleteIndex]) {
+        const selected = autocompleteSuggestions[autocompleteIndex].title;
+        setQuery(selected);
+        handleSearch(selected);
+      } else {
+        handleSearch(query);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setAutocompleteIndex(prev =>
+        Math.min(prev + 1, autocompleteSuggestions.length - 1)
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setAutocompleteIndex(prev => Math.max(prev - 1, -1));
+    } else if (e.key === 'Escape') {
+      setShowAutocomplete(false);
+    }
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* 헤더 */}
+      <div className="shrink-0 bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">🔍</div>
+              <div>
+                <h1 className="text-xl font-black text-gray-800">북클럽 3.0 통합검색</h1>
+                <p className="text-xs text-gray-500">실시간 인덱싱 · KRS 개인화 · 초성 검색</p>
+              </div>
+            </div>
+
+            {/* 사용자 KRS 레벨 선택 */}
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-gray-600">내 독서 레벨:</span>
+              <select
+                value={userKrs}
+                onChange={(e) => setUserKrs(Number(e.target.value))}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg font-semibold text-blue-600 bg-white cursor-pointer"
+              >
+                {[1,2,3,4,5].map(level => (
+                  <option key={level} value={level}>KRS Lv.{level}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* 검색 바 */}
+          <div className="mt-4 relative">
+            <div className="relative">
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setShowAutocomplete(true);
+                  setAutocompleteIndex(-1);
+                }}
+                onFocus={() => setShowAutocomplete(true)}
+                onKeyDown={handleKeyDown}
+                placeholder="제목, 저자, 초성으로 검색 (예: 신비아파트, ㅅㅂㅇㅍㅌ)"
+                className="w-full px-5 py-4 pr-32 text-lg border-2 border-gray-300 rounded-2xl focus:outline-none focus:border-blue-500 transition-all"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                {query && (
+                  <button
+                    onClick={() => {setQuery(''); inputRef.current?.focus()}}
+                    className="text-gray-400 hover:text-gray-600 text-xl"
+                  >
+                    ✕
+                  </button>
+                )}
+                <button
+                  onClick={() => handleSearch(query)}
+                  className="px-5 py-2 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 active:scale-95 transition-all"
+                >
+                  검색
+                </button>
+              </div>
+            </div>
+
+            {/* 자동완성 */}
+            {showAutocomplete && query && autocompleteSuggestions.length > 0 && (
+              <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50 anim-slide-up">
+                {autocompleteSuggestions.map((sugg, idx) => (
+                  <div
+                    key={idx}
+                    className={`autocomplete-item px-5 py-3 cursor-pointer flex items-center justify-between ${idx === autocompleteIndex ? 'active' : ''}`}
+                    onClick={() => {
+                      setQuery(sugg.title);
+                      handleSearch(sugg.title);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400">🔍</span>
+                      <span className="font-medium text-gray-800">{sugg.title}</span>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {sugg.type === 'exact' && '정확'}
+                      {sugg.type === 'chosung' && '초성'}
+                      {sugg.type === 'author' && '저자'}
+                      {sugg.type === 'partial' && '부분'}
+                      {sugg.type === 'fuzzy' && '유사'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 최근 검색어 */}
+            {showAutocomplete && !query && searchHistory.length > 0 && (
+              <div className="absolute top-full mt-2 w-full bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-50 anim-slide-up">
+                <div className="text-xs text-gray-500 mb-2 font-semibold">최근 검색어</div>
+                <div className="flex flex-wrap gap-2">
+                  {searchHistory.map((term, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setQuery(term);
+                        handleSearch(term);
+                      }}
+                      className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700 transition-all"
+                    >
+                      🕒 {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 필터 및 옵션 */}
+          <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
+            {/* KRS 필터 토글 */}
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={krsFilterOn}
+                onChange={(e) => setKrsFilterOn(e.target.checked)}
+                className="w-5 h-5 cursor-pointer"
+              />
+              <span className="text-sm font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">
+                👶 우리 아이 수준에 맞는 도서만 보기 (KRS Lv.{userKrs} ±1)
+              </span>
+            </label>
+
+            {/* 장르 필터 */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {['all', '만화', '동화', '과학', '판타지', '모험'].map(genre => (
+                <button
+                  key={genre}
+                  onClick={() => setGenreFilter(genre)}
+                  className={`filter-chip px-3 py-1 rounded-full text-sm font-medium ${
+                    genreFilter === genre
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {genre === 'all' ? '전체' : genre}
+                </button>
+              ))}
+            </div>
+
+            {/* 정렬 */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white cursor-pointer"
+            >
+              <option value="relevance">관련도순</option>
+              <option value="latest">최신순</option>
+              <option value="popular">인기순</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 검색 결과 */}
+      <div className="flex-1 overflow-y-auto custom-scroll">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          {/* 결과 헤더 */}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="spinner"></div>
+                  <span>검색 중...</span>
+                </div>
+              ) : (
+                <span>
+                  검색 결과 <span className="font-bold text-blue-600">{searchResults.length}</span>권
+                  {query && <span className="ml-2 text-gray-400">"{query}"</span>}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* 결과 없음 */}
+          {!loading && searchResults.length === 0 && query && (
+            <div className="text-center py-12 anim-slide-up">
+              <div className="text-6xl mb-4">😢</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                "{query}"에 대한 검색 결과가 없습니다
+              </h3>
+              <p className="text-gray-500 mb-6">다른 검색어를 시도해보세요</p>
+
+              <div className="mt-8 max-w-4xl mx-auto">
+                <h4 className="text-lg font-bold text-gray-700 mb-4">
+                  🎯 이런 도서는 어때요? (우리 아이 수준에 맞춰요!)
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {SAMPLE_BOOKS
+                    .filter(b => b.krsLevel >= userKrs - 1 && b.krsLevel <= userKrs + 1)
+                    .sort((a,b) => b.popularity - a.popularity)
+                    .slice(0, 6)
+                    .map(book => (
+                      <BookCard key={book.id} book={book} userKrs={userKrs} highlight={false} />
+                    ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 결과 그리드 */}
+          {!loading && searchResults.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {searchResults.map((book, idx) => (
+                <div
+                  key={book.id}
+                  className="anim-slide-up"
+                  style={{animationDelay: `${idx * 0.05}s`}}
+                >
+                  <BookCard
+                    book={book}
+                    userKrs={userKrs}
+                    highlight={query}
+                    matchType={book.matchInfo?.type}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 푸터 */}
+      <div className="shrink-0 bg-white border-t border-gray-200 px-4 py-3">
+        <div className="max-w-7xl mx-auto text-xs text-gray-500 text-center">
+          🚀 실시간 인덱싱 · OpenSearch 기반 · Nori 형태소 분석 · KRS 개인화 랭킹 엔진
+          <span className="ml-3 text-blue-500 font-semibold">v1.0 Prototype</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   도서 카드 컴포넌트
+   ══════════════════════════════════════════════ */
+function BookCard({book, userKrs, highlight, matchType}) {
+  const isMatchedLevel = book.krsLevel === userKrs;
+  const isNearLevel = Math.abs(book.krsLevel - userKrs) === 1;
+
+  // 제목 하이라이트
+  const highlightTitle = (title) => {
+    if (!highlight) return title;
+    const idx = title.toLowerCase().indexOf(highlight.toLowerCase());
+    if (idx === -1) return title;
+
+    return (
+      <>
+        {title.slice(0, idx)}
+        <span className="chosung-highlight">{title.slice(idx, idx + highlight.length)}</span>
+        {title.slice(idx + highlight.length)}
+      </>
+    );
+  };
+
+  return (
+    <div className="search-result bg-white rounded-xl p-4 shadow-sm cursor-pointer group">
+      {/* 표지 */}
+      <div className="relative mb-3">
+        <div className="aspect-[3/4] bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center text-6xl group-hover:scale-105 transition-transform">
+          {book.cover}
+        </div>
+
+        {/* KRS 레벨 배지 */}
+        <div className={`absolute top-2 left-2 krs-badge krs-${book.krsLevel}`}>
+          KRS {book.krsLevel}
+        </div>
+
+        {/* 매칭 타입 배지 */}
+        {matchType && (
+          <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full text-[10px] font-bold">
+            {matchType === 'exact' && '정확'}
+            {matchType === 'chosung' && '초성'}
+            {matchType === 'author' && '저자'}
+            {matchType === 'partial' && '부분'}
+            {matchType === 'fuzzy' && '유사'}
+          </div>
+        )}
+
+        {/* KRS 매칭 표시 */}
+        {isMatchedLevel && (
+          <div className="absolute bottom-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-lg text-[10px] font-bold">
+            ⭐ 딱 맞아요!
+          </div>
+        )}
+        {isNearLevel && (
+          <div className="absolute bottom-2 right-2 bg-green-500 text-white px-2 py-1 rounded-lg text-[10px] font-bold">
+            👍 추천해요
+          </div>
+        )}
+      </div>
+
+      {/* 정보 */}
+      <div>
+        <h3 className="font-bold text-gray-800 text-sm mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+          {highlightTitle(book.title)}
+        </h3>
+        <p className="text-xs text-gray-500 mb-2">{book.author}</p>
+
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1 text-yellow-500">
+            ⭐ {book.rating.toFixed(1)}
+          </div>
+          <div className="text-gray-400">
+            {book.reviews.toLocaleString()} 리뷰
+          </div>
+        </div>
+
+        {book.series && (
+          <div className="mt-2 text-[10px] text-blue-600 font-medium">
+            📚 {book.series} 시리즈
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   렌더링
+   ══════════════════════════════════════════════ */
+ReactDOM.createRoot(document.getElementById('root')).render(<SearchApp />);
+</script>
+</body>
+</html>

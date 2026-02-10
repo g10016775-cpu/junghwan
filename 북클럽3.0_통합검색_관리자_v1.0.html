@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>북클럽 3.0 통합검색 관리자 v1.0</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body,#root{width:100%;height:100%;overflow:hidden;background:#F8FAFC}
+
+@keyframes slide-up{0%{transform:translateY(20px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.anim-slide-up{animation:slide-up 0.3s ease-out both}
+
+.custom-scroll::-webkit-scrollbar{width:8px}
+.custom-scroll::-webkit-scrollbar-track{background:#F1F5F9;border-radius:10px}
+.custom-scroll::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:10px}
+
+.status-badge{
+  padding:4px 12px;
+  border-radius:12px;
+  font-size:12px;
+  font-weight:600;
+}
+.status-active{background:#D1FAE5;color:#065F46}
+.status-suspended{background:#FEE2E2;color:#991B1B}
+.status-pending{background:#FEF3C7;color:#92400E}
+
+.progress-bar{
+  height:8px;
+  border-radius:4px;
+  background:#E5E7EB;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  transition:width 0.3s ease;
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useMemo} = React;
+
+/* ══════════════════════════════════════════════
+   샘플 데이터
+   ══════════════════════════════════════════════ */
+const SAMPLE_ASSETS = [
+  {id:'A123456', title:'신비아파트 고스트볼 X의 탄생', author:'서울문화사 편집부', publisher:'서울문화사', isbn:'9788926377123', krsLevel:3, searchVisibility:'auto', contentStatus:'active', serviceTarget:'all', metadataCompleteness:95, qualityScore:100, copyrightStatus:'normal', rating:'all', hasLegalIssue:false, lastIndexedAt:'2025-02-10 14:32:15', isSearchable:true},
+  {id:'A234567', title:'또봇 어드벤처', author:'레트로봇', publisher:'영실업', isbn:'9781234567890', krsLevel:3, searchVisibility:'auto', contentStatus:'active', serviceTarget:'all', metadataCompleteness:88, qualityScore:100, copyrightStatus:'normal', rating:'all', hasLegalIssue:false, lastIndexedAt:'2025-02-10 13:15:42', isSearchable:true},
+  {id:'A345678', title:'신비한 마법의 성', author:'김마법', publisher:'마법출판사', isbn:'9782345678901', krsLevel:3, searchVisibility:'force_hide', contentStatus:'active', serviceTarget:'all', metadataCompleteness:72, qualityScore:85, copyrightStatus:'normal', rating:'all', hasLegalIssue:false, lastIndexedAt:null, isSearchable:false},
+  {id:'A456789', title:'공룡 대탐험', author:'김공룡', publisher:'과학나라', isbn:'9783456789012', krsLevel:4, searchVisibility:'auto', contentStatus:'suspended', serviceTarget:'all', metadataCompleteness:91, qualityScore:70, copyrightStatus:'pending', rating:'all', hasLegalIssue:false, lastIndexedAt:'2025-02-09 18:23:11', isSearchable:false},
+  {id:'A567890', title:'마법 학교 1학년', author:'정마법', publisher:'마법출판', isbn:'9784567890123', krsLevel:4, searchVisibility:'force_show', contentStatus:'active', serviceTarget:'premium', metadataCompleteness:100, qualityScore:95, copyrightStatus:'normal', rating:'all', hasLegalIssue:false, lastIndexedAt:'2025-02-10 15:01:33', isSearchable:true},
+];
+
+const INDEXING_LOGS = [
+  {id:1, assetId:'A123456', timestamp:'2025-02-10 14:32:15', status:'success', duration:234, message:'인덱싱 성공'},
+  {id:2, assetId:'A234567', timestamp:'2025-02-10 13:15:42', status:'success', duration:189, message:'인덱싱 성공'},
+  {id:3, assetId:'A456789', timestamp:'2025-02-10 12:45:21', status:'failed', duration:5023, message:'인덱싱 실패: 저작권 미확정', retryCount:3},
+  {id:4, assetId:'A567890', timestamp:'2025-02-10 15:01:33', status:'success', duration:312, message:'인덱싱 성공'},
+  {id:5, assetId:'A345678', timestamp:'2025-02-10 11:23:54', status:'skipped', duration:12, message:'노출 조건 미달: 메타데이터 완성도 부족'},
+];
+
+const SEARCH_STATS = {
+  totalSearches: 12345,
+  successRate: 97.5,
+  avgResponseTime: 245,
+  indexedAssets: 18234,
+  searchableAssets: 15678,
+  lastUpdated: '2025-02-10 15:30:00'
+};
+
+/* ══════════════════════════════════════════════
+   메인 관리자 컴포넌트
+   ══════════════════════════════════════════════ */
+function AdminApp() {
+  const [activeTab, setActiveTab] = useState('assets'); // assets, logs, stats
+  const [selectedAsset, setSelectedAsset] = useState(null);
+  const [assets, setAssets] = useState(SAMPLE_ASSETS);
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  const filteredAssets = useMemo(() => {
+    if (filterStatus === 'all') return assets;
+    if (filterStatus === 'searchable') return assets.filter(a => a.isSearchable);
+    if (filterStatus === 'hidden') return assets.filter(a => !a.isSearchable);
+    return assets;
+  }, [assets, filterStatus]);
+
+  return (
+    <div className="w-full h-full flex">
+      {/* 사이드바 */}
+      <div className="w-64 bg-gray-900 text-white shrink-0 flex flex-col">
+        <div className="p-6 border-b border-gray-700">
+          <div className="text-2xl mb-2">⚙️</div>
+          <h1 className="text-xl font-black">검색 관리자</h1>
+          <p className="text-xs text-gray-400 mt-1">통합검색 시스템</p>
+        </div>
+
+        <nav className="flex-1 p-4">
+          <button
+            onClick={() => setActiveTab('assets')}
+            className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+              activeTab === 'assets' ? 'bg-blue-600' : 'hover:bg-gray-800'
+            }`}
+          >
+            📚 자재 검색 관리
+          </button>
+          <button
+            onClick={() => setActiveTab('logs')}
+            className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+              activeTab === 'logs' ? 'bg-blue-600' : 'hover:bg-gray-800'
+            }`}
+          >
+            📋 인덱싱 로그
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+              activeTab === 'stats' ? 'bg-blue-600' : 'hover:bg-gray-800'
+            }`}
+          >
+            📊 통계 대시보드
+          </button>
+        </nav>
+
+        <div className="p-4 border-t border-gray-700 text-xs text-gray-400">
+          <div>관리자: admin@bookclub.com</div>
+          <div className="mt-1">v1.0 Prototype</div>
+        </div>
+      </div>
+
+      {/* 메인 컨텐츠 */}
+      <div className="flex-1 flex flex-col">
+        {activeTab === 'assets' && (
+          <AssetsTab
+            assets={filteredAssets}
+            filterStatus={filterStatus}
+            setFilterStatus={setFilterStatus}
+            selectedAsset={selectedAsset}
+            setSelectedAsset={setSelectedAsset}
+            setAssets={setAssets}
+          />
+        )}
+        {activeTab === 'logs' && <LogsTab logs={INDEXING_LOGS} />}
+        {activeTab === 'stats' && <StatsTab stats={SEARCH_STATS} />}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   자재 검색 관리 탭
+   ══════════════════════════════════════════════ */
+function AssetsTab({assets, filterStatus, setFilterStatus, selectedAsset, setSelectedAsset, setAssets}) {
+  const handleUpdateVisibility = (assetId, newVisibility) => {
+    setAssets(prev => prev.map(a =>
+      a.id === assetId
+        ? {
+            ...a,
+            searchVisibility: newVisibility,
+            isSearchable: calculateSearchable({...a, searchVisibility: newVisibility}),
+            lastIndexedAt: new Date().toLocaleString('sv-SE').replace(' ', ' ')
+          }
+        : a
+    ));
+  };
+
+  const calculateSearchable = (asset) => {
+    if (asset.searchVisibility === 'force_hide') return false;
+    if (asset.searchVisibility === 'force_show' && !asset.hasLegalIssue) return true;
+    // auto 모드
+    return (
+      asset.contentStatus === 'active' &&
+      asset.metadataCompleteness >= 80 &&
+      asset.qualityScore >= 60 &&
+      asset.copyrightStatus === 'normal' &&
+      asset.rating !== 'pending'
+    );
+  };
+
+  const triggerReindex = (assetId) => {
+    alert(`[시뮬레이션] ${assetId} 재인덱싱 트리거\n\n실제로는 Kafka 메시지 발행 또는 API 호출`);
+    setAssets(prev => prev.map(a =>
+      a.id === assetId
+        ? {...a, lastIndexedAt: new Date().toLocaleString('sv-SE').replace(' ', ' ')}
+        : a
+    ));
+  };
+
+  return (
+    <div className="flex-1 flex">
+      {/* 자재 목록 */}
+      <div className="flex-1 flex flex-col">
+        <div className="shrink-0 bg-white border-b border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-black text-gray-800">자재 검색 관리</h2>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">총 {assets.length}건</span>
+            </div>
+          </div>
+
+          {/* 필터 */}
+          <div className="flex gap-2">
+            {[
+              {key:'all', label:'전체', count:assets.length},
+              {key:'searchable', label:'노출 중', count:assets.filter(a=>a.isSearchable).length},
+              {key:'hidden', label:'숨김', count:assets.filter(a=>!a.isSearchable).length},
+            ].map(filter => (
+              <button
+                key={filter.key}
+                onClick={() => setFilterStatus(filter.key)}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  filterStatus === filter.key
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {filter.label} ({filter.count})
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scroll bg-gray-50 p-6">
+          <div className="space-y-3">
+            {assets.map((asset, idx) => (
+              <div
+                key={asset.id}
+                className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer transition-all hover:shadow-md ${
+                  selectedAsset?.id === asset.id ? 'ring-2 ring-blue-500' : ''
+                }`}
+                onClick={() => setSelectedAsset(asset)}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-gray-800">{asset.title}</h3>
+                      {asset.isSearchable ? (
+                        <span className="status-badge status-active">✓ 노출 중</span>
+                      ) : (
+                        <span className="status-badge status-suspended">✕ 숨김</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{asset.author} · {asset.publisher}</p>
+                    <p className="text-xs text-gray-400 mt-1">ID: {asset.id} · KRS Lv.{asset.krsLevel}</p>
+                  </div>
+                  <div className="text-right text-xs text-gray-500">
+                    {asset.lastIndexedAt ? (
+                      <div>
+                        <div>마지막 인덱싱:</div>
+                        <div className="font-mono">{asset.lastIndexedAt}</div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400">미인덱싱</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500">메타데이터:</span>
+                    <span className={`font-bold ${asset.metadataCompleteness >= 80 ? 'text-green-600' : 'text-red-600'}`}>
+                      {asset.metadataCompleteness}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500">품질:</span>
+                    <span className={`font-bold ${asset.qualityScore >= 60 ? 'text-green-600' : 'text-red-600'}`}>
+                      {asset.qualityScore}점
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500">상태:</span>
+                    <span className="font-bold">{asset.contentStatus}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 상세 패널 */}
+      {selectedAsset && (
+        <AssetDetailPanel
+          asset={selectedAsset}
+          onUpdate={handleUpdateVisibility}
+          onReindex={triggerReindex}
+          onClose={() => setSelectedAsset(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   자재 상세 패널
+   ══════════════════════════════════════════════ */
+function AssetDetailPanel({asset, onUpdate, onReindex, onClose}) {
+  const [localVisibility, setLocalVisibility] = useState(asset.searchVisibility);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    setLocalVisibility(asset.searchVisibility);
+    setHasChanges(false);
+  }, [asset]);
+
+  const handleSave = () => {
+    onUpdate(asset.id, localVisibility);
+    setHasChanges(false);
+  };
+
+  const getAutoStatus = () => {
+    const checks = [
+      {label:'메타데이터 완성도', pass:asset.metadataCompleteness >= 80, value:`${asset.metadataCompleteness}/100`},
+      {label:'품질 점수', pass:asset.qualityScore >= 60, value:`${asset.qualityScore}/100`},
+      {label:'콘텐츠 상태', pass:asset.contentStatus === 'active', value:asset.contentStatus},
+      {label:'저작권', pass:asset.copyrightStatus === 'normal', value:asset.copyrightStatus},
+      {label:'심의 등급', pass:asset.rating !== 'pending', value:asset.rating},
+    ];
+    return checks;
+  };
+
+  const autoChecks = getAutoStatus();
+  const allPass = autoChecks.every(c => c.pass);
+
+  return (
+    <div className="w-[500px] bg-white border-l border-gray-200 shrink-0 flex flex-col anim-slide-up">
+      <div className="shrink-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h2 className="text-xl font-black mb-1">🔍 검색 노출 설정</h2>
+            <p className="text-sm opacity-90">{asset.title}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white hover:bg-white/20 rounded-lg p-2 transition-all"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="text-xs opacity-75">
+          Asset ID: {asset.id}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scroll p-6">
+        {/* 검색 노출 모드 */}
+        <div className="mb-6">
+          <label className="block text-sm font-bold text-gray-700 mb-3">검색 노출 모드</label>
+          <div className="space-y-2">
+            <label className={`flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+              localVisibility === 'auto' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+            }`}>
+              <input
+                type="radio"
+                name="visibility"
+                value="auto"
+                checked={localVisibility === 'auto'}
+                onChange={(e) => {setLocalVisibility(e.target.value); setHasChanges(true)}}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="font-semibold text-gray-800">◉ 자동 (권장)</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  현재 상태: {asset.isSearchable && localVisibility === 'auto' ? (
+                    <span className="text-green-600 font-bold">✅ 노출 중</span>
+                  ) : (
+                    <span className="text-red-600 font-bold">✕ 조건 미달</span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  정책에 따라 자동 결정
+                </div>
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+              localVisibility === 'force_show' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+            }`}>
+              <input
+                type="radio"
+                name="visibility"
+                value="force_show"
+                checked={localVisibility === 'force_show'}
+                onChange={(e) => {setLocalVisibility(e.target.value); setHasChanges(true)}}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="font-semibold text-gray-800">◉ 강제 노출</div>
+                <div className="text-xs text-orange-600 font-semibold mt-1">
+                  ⚠️ 정책 위반 시에도 노출됩니다
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  프로모션 등 특수 목적용
+                </div>
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+              localVisibility === 'force_hide' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+            }`}>
+              <input
+                type="radio"
+                name="visibility"
+                value="force_hide"
+                checked={localVisibility === 'force_hide'}
+                onChange={(e) => {setLocalVisibility(e.target.value); setHasChanges(true)}}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="font-semibold text-gray-800">◉ 강제 숨김</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  현재 상태: <span className="text-red-600 font-bold">절대 노출 안 함</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  일시적 숨김 처리
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* 자동 노출 조건 체크 */}
+        <div className="bg-gray-50 rounded-xl p-4 mb-6">
+          <h3 className="font-bold text-gray-700 text-sm mb-3">📊 자동 노출 조건 체크</h3>
+          <div className="space-y-2">
+            {autoChecks.map((check, idx) => (
+              <div key={idx} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={check.pass ? 'text-green-600' : 'text-red-600'}>
+                    {check.pass ? '✅' : '❌'}
+                  </span>
+                  <span className="text-gray-700">{check.label}</span>
+                </div>
+                <span className={`font-semibold ${check.pass ? 'text-green-600' : 'text-red-600'}`}>
+                  {check.value}
+                </span>
+              </div>
+            ))}
+          </div>
+          {allPass ? (
+            <div className="mt-3 text-xs text-green-700 bg-green-100 rounded-lg p-2 font-semibold">
+              ✓ 모든 조건 충족 - 자동 노출 가능
+            </div>
+          ) : (
+            <div className="mt-3 text-xs text-red-700 bg-red-100 rounded-lg p-2 font-semibold">
+              ✕ 조건 미달 - 자동 노출 불가
+            </div>
+          )}
+        </div>
+
+        {/* 메타데이터 상세 */}
+        <div className="border border-gray-200 rounded-xl p-4 mb-6">
+          <h3 className="font-bold text-gray-700 text-sm mb-3">📝 메타데이터 상세</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">ISBN:</span>
+              <span className="font-mono">{asset.isbn}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">KRS 레벨:</span>
+              <span className="font-semibold">Lv.{asset.krsLevel}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">서비스 타겟:</span>
+              <span className="font-semibold">{asset.serviceTarget}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">심의 등급:</span>
+              <span className="font-semibold">{asset.rating}</span>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-gray-600">메타데이터 완성도</span>
+              <span className="font-bold">{asset.metadataCompleteness}%</span>
+            </div>
+            <div className="progress-bar">
+              <div
+                className={`progress-fill ${asset.metadataCompleteness >= 80 ? 'bg-green-500' : 'bg-red-500'}`}
+                style={{width: `${asset.metadataCompleteness}%`}}
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        {/* 마지막 인덱싱 */}
+        <div className="bg-blue-50 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-blue-900 text-sm">🕐 마지막 인덱싱</h3>
+            <button
+              onClick={() => onReindex(asset.id)}
+              className="text-xs px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 active:scale-95 transition-all font-semibold"
+            >
+              🔄 즉시 재인덱싱
+            </button>
+          </div>
+          <div className="text-sm font-mono text-blue-700">
+            {asset.lastIndexedAt || '아직 인덱싱되지 않음'}
+          </div>
+        </div>
+      </div>
+
+      {/* 하단 버튼 */}
+      <div className="shrink-0 border-t border-gray-200 p-6 bg-white">
+        {hasChanges && (
+          <div className="mb-3 text-xs text-orange-600 bg-orange-50 rounded-lg p-2 font-semibold">
+            ⚠️ 변경 사항이 저장되지 않았습니다
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges}
+            className={`flex-1 py-3 rounded-xl font-bold transition-all ${
+              hasChanges
+                ? 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            💾 저장
+          </button>
+          <button
+            onClick={onClose}
+            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 active:scale-95 transition-all"
+          >
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   인덱싱 로그 탭
+   ══════════════════════════════════════════════ */
+function LogsTab({logs}) {
+  return (
+    <div className="flex-1 flex flex-col">
+      <div className="shrink-0 bg-white border-b border-gray-200 p-6">
+        <h2 className="text-2xl font-black text-gray-800">인덱싱 로그</h2>
+        <p className="text-sm text-gray-600 mt-1">실시간 인덱싱 파이프라인 모니터링</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scroll bg-gray-50 p-6">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600">시각</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600">Asset ID</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600">상태</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600">소요시간</th>
+                <th className="px-4 py-3 text-left text-xs font-bold text-gray-600">메시지</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log, idx) => (
+                <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm font-mono text-gray-600">{log.timestamp}</td>
+                  <td className="px-4 py-3 text-sm font-mono text-blue-600">{log.assetId}</td>
+                  <td className="px-4 py-3">
+                    {log.status === 'success' && <span className="status-badge status-active">✓ 성공</span>}
+                    {log.status === 'failed' && <span className="status-badge status-suspended">✕ 실패</span>}
+                    {log.status === 'skipped' && <span className="status-badge status-pending">⊘ 스킵</span>}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{log.duration}ms</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    {log.message}
+                    {log.retryCount && <span className="ml-2 text-xs text-red-600">(재시도 {log.retryCount}회)</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   통계 대시보드 탭
+   ══════════════════════════════════════════════ */
+function StatsTab({stats}) {
+  return (
+    <div className="flex-1 flex flex-col">
+      <div className="shrink-0 bg-white border-b border-gray-200 p-6">
+        <h2 className="text-2xl font-black text-gray-800">통계 대시보드</h2>
+        <p className="text-sm text-gray-600 mt-1">검색 시스템 실시간 모니터링</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scroll bg-gray-50 p-6">
+        <div className="grid grid-cols-2 gap-6">
+          {/* 검색 통계 */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-3xl">🔍</div>
+              <div>
+                <h3 className="font-bold text-gray-800">총 검색 수</h3>
+                <p className="text-xs text-gray-500">오늘</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-blue-600">{stats.totalSearches.toLocaleString()}</div>
+          </div>
+
+          {/* 성공률 */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-3xl">✅</div>
+              <div>
+                <h3 className="font-bold text-gray-800">검색 성공률</h3>
+                <p className="text-xs text-gray-500">결과 1건 이상</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-green-600">{stats.successRate}%</div>
+          </div>
+
+          {/* 응답 시간 */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-3xl">⚡</div>
+              <div>
+                <h3 className="font-bold text-gray-800">평균 응답 시간</h3>
+                <p className="text-xs text-gray-500">p95</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-purple-600">{stats.avgResponseTime}ms</div>
+          </div>
+
+          {/* 인덱싱 현황 */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-3xl">📚</div>
+              <div>
+                <h3 className="font-bold text-gray-800">인덱싱 현황</h3>
+                <p className="text-xs text-gray-500">노출 가능 자재</p>
+              </div>
+            </div>
+            <div className="text-4xl font-black text-orange-600">
+              {stats.searchableAssets.toLocaleString()}
+              <span className="text-xl text-gray-400"> / {stats.indexedAssets.toLocaleString()}</span>
+            </div>
+            <div className="mt-3">
+              <div className="progress-bar">
+                <div
+                  className="progress-fill bg-orange-500"
+                  style={{width: `${(stats.searchableAssets / stats.indexedAssets * 100)}%`}}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 시스템 상태 */}
+        <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
+          <h3 className="font-bold text-gray-800 mb-4">🖥️ 시스템 상태</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <span className="text-sm text-gray-600">OpenSearch Cluster</span>
+              <span className="status-badge status-active">🟢 정상</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <span className="text-sm text-gray-600">Kafka Pipeline</span>
+              <span className="status-badge status-active">🟢 정상</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <span className="text-sm text-gray-600">Indexer Service</span>
+              <span className="status-badge status-active">🟢 정상</span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-gray-600">Circuit Breaker</span>
+              <span className="status-badge status-active">🟢 CLOSED</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 text-xs text-gray-400 text-center">
+          마지막 업데이트: {stats.lastUpdated}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   렌더링
+   ══════════════════════════════════════════════ */
+ReactDOM.createRoot(document.getElementById('root')).render(<AdminApp />);
+</script>
+</body>
+</html>
