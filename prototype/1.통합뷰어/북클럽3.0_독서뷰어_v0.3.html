@@ -1814,6 +1814,275 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   );
 }
 
+function ReportWriter({ bookName, pageImageSrc, onExit, existingReport }) {
+  const reportId = useRef(existingReport?.id || newId()).current;
+  const [step, setStep] = useState(existingReport?.reviewType ? 3 : 2); // 2:유형선택, 3:작성, 4:미리보기
+  const [reviewType, setReviewType] = useState(existingReport?.reviewType || null);
+  const [bodyText, setBodyText] = useState(existingReport?.bodyText || '');
+  const [drawingData, setDrawingData] = useState(existingReport?.drawingData || null);
+  const [stickers, setStickers] = useState(existingReport?.stickers || []);
+  const [showDrawing, setShowDrawing] = useState(false);
+  const [showPhotoPickerX, setShowPhotoPickerX] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const typeInfo = reviewType ? REVIEW_TYPES.find(t => t.id === reviewType) : null;
+  const canSave = reviewType && (bodyText.trim().length >= 5 || drawingData);
+
+  /* ── 저장 ── */
+  const handleSave = () => {
+    upsertReport({
+      id: reportId, bookName, reviewType, bodyText, drawingData, stickers,
+      thumbnail: drawingData || null,
+      title: typeInfo ? typeInfo.label + ' 감상문' : '감상문',
+      createdAt: existingReport?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onExit(); }, 1500);
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+      {/* 헤더 */}
+      <div className="shrink-0 px-4 py-3 bg-white/90 backdrop-blur-sm shadow-sm z-20">
+        <div className="flex items-center justify-between">
+          <button onClick={onExit} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-base active:scale-95">←</button>
+          <h1 className="font-black text-lg text-gray-700">✏️ 감상문 쓰기</h1>
+          <span className="text-xs text-gray-400">📖 {bookName}</span>
+        </div>
+        {/* 단계 표시 */}
+        <div className="flex items-center gap-2 mt-3">
+          {['🎨 유형', '✍️ 작성', '👀 미리보기'].map((label, i) => {
+            const sn = i + 2;
+            return (
+              <div key={i} className="flex items-center gap-1 flex-1">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${step > sn ? 'bg-green-400 text-white' : step === sn ? 'bg-amber-400 text-white shadow' : 'bg-gray-200 text-gray-400'}`}>
+                  {step > sn ? '✓' : sn - 1}
+                </div>
+                <span className={`text-xs font-bold truncate ${step === sn ? 'text-amber-600' : 'text-gray-400'}`}>{label}</span>
+                {i < 2 && <div className={`flex-1 h-0.5 ${step > sn ? 'bg-green-400' : 'bg-gray-200'}`}/>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {/* Step 2: 유형 선택 */}
+        {step === 2 && (
+          <div className="p-5 max-w-lg mx-auto">
+            <div className="bg-white rounded-3xl p-6 shadow-lg anim-slide-up">
+              <h3 className="font-black text-xl text-gray-700 mb-5">어떤 감상문을 쓸까요?</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {REVIEW_TYPES.map(type => (
+                  <button key={type.id} onClick={() => { setReviewType(type.id); setStep(3); }}
+                    className={`flex flex-col items-center gap-3 p-6 rounded-2xl transition-all active:scale-95 hover:shadow-xl ${type.bg} border-2 border-transparent hover:border-white`}>
+                    <span className="text-5xl">{type.icon}</span>
+                    <span className="font-black text-gray-700">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: 작성 */}
+        {step === 3 && (
+          <div className="p-5 max-w-lg mx-auto space-y-4">
+            {/* 선택 정보 */}
+            <div className="bg-white rounded-2xl p-4 shadow flex items-center gap-3 anim-slide-up">
+              <span className="text-3xl">📖</span>
+              <div className="flex-1">
+                <p className="font-bold text-gray-700 text-sm">{bookName}</p>
+                {typeInfo && <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${typeInfo.color} text-white mt-1`}>{typeInfo.icon} {typeInfo.label}</span>}
+              </div>
+              <button onClick={() => setStep(2)} className="text-sm text-gray-400 underline">변경</button>
+            </div>
+
+            {/* 그리기 */}
+            <div className="bg-white rounded-2xl p-5 shadow anim-slide-up" style={{animationDelay:'100ms'}}>
+              <h4 className="font-black text-gray-700 mb-3 flex items-center gap-2">🎨 그림으로 표현하기 <span className="text-xs text-gray-400 font-normal">(선택)</span></h4>
+              {drawingData ? (
+                <div className="relative">
+                  <img src={drawingData} className="w-full h-44 object-contain rounded-xl bg-gray-50" alt="내 그림"/>
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button onClick={() => setShowDrawing(true)} className="px-3 py-1.5 rounded-lg bg-white/90 text-xs font-bold text-gray-600 shadow">✏️ 수정</button>
+                    <button onClick={() => setDrawingData(null)} className="px-3 py-1.5 rounded-lg bg-white/90 text-xs font-bold text-red-500 shadow">🗑️</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setShowDrawing(true)}
+                  className="w-full h-36 rounded-2xl border-3 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-amber-300 hover:text-amber-500 transition active:scale-95">
+                  <span className="text-4xl">🖌️</span><span className="font-bold">터치해서 그림 그리기</span>
+                </button>
+              )}
+            </div>
+
+            {/* 스티커 */}
+            <div className="bg-white rounded-2xl p-5 shadow anim-slide-up" style={{animationDelay:'200ms'}}>
+              <h4 className="font-black text-gray-700 mb-3 flex items-center gap-2">🎀 스티커 꾸미기 <span className="text-xs text-gray-400 font-normal">(선택)</span></h4>
+              <div className="flex gap-2 flex-wrap">
+                {REVIEW_STICKERS.map(s => (
+                  <button key={s} onClick={() => setStickers(prev => prev.length < 8 ? [...prev, s] : prev)}
+                    className="w-11 h-11 rounded-xl bg-gray-50 flex items-center justify-center text-xl hover:bg-amber-50 hover:scale-110 active:scale-90 transition">{s}</button>
+                ))}
+              </div>
+              {stickers.length > 0 && (
+                <div className="mt-3 flex items-center gap-1 flex-wrap">
+                  <span className="text-sm text-gray-400 mr-1">선택:</span>
+                  {stickers.map((s,i) => (<button key={i} onClick={() => setStickers(prev => prev.filter((_,idx)=>idx!==i))} className="text-2xl hover:opacity-50 transition">{s}</button>))}
+                  <button onClick={() => setStickers([])} className="ml-2 text-xs text-red-400 underline">전체 삭제</button>
+                </div>
+              )}
+            </div>
+
+            {/* 글쓰기 */}
+            <div className="bg-white rounded-2xl p-5 shadow anim-slide-up" style={{animationDelay:'300ms'}}>
+              <h4 className="font-black text-gray-700 mb-3">✍️ 책을 읽고 어떤 생각이 들었나요?</h4>
+              <textarea value={bodyText} onChange={e => setBodyText(e.target.value)}
+                placeholder="책을 읽고 느낀 점을 자유롭게 써보세요..."
+                className="w-full h-32 p-4 border-3 border-amber-200 rounded-xl text-base resize-none focus:outline-none focus:border-amber-400 transition"/>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-xs text-gray-400">{bodyText.length}자</span>
+                <span className="text-xs text-gray-400">글 또는 그림 중 하나는 필수</span>
+              </div>
+            </div>
+
+            {/* 하단 버튼 */}
+            <div className="flex gap-3 pb-6">
+              <button onClick={() => setStep(2)} className="flex-1 py-4 rounded-2xl bg-gray-100 font-bold text-gray-500 active:scale-95 transition">← 이전</button>
+              <button onClick={() => setStep(4)} disabled={!canSave}
+                className={`flex-1 py-4 rounded-2xl font-bold text-white shadow-lg transition-all active:scale-95 ${canSave ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gray-300 cursor-not-allowed'}`}>
+                👀 미리보기 →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: 미리보기 */}
+        {step === 4 && (
+          <div className="p-5 flex flex-col items-center gap-5">
+            <h3 className="font-black text-xl text-gray-700 anim-slide-up">미리보기</h3>
+            <ReviewPreviewCard bookName={bookName} typeInfo={typeInfo} drawingData={drawingData} stickers={stickers} bodyText={bodyText} />
+            <div className="flex gap-3 w-full max-w-sm">
+              <button onClick={() => setStep(3)} className="flex-1 py-4 rounded-2xl bg-gray-100 font-bold text-gray-500 active:scale-95 transition">← 수정하기</button>
+              <button onClick={handleSave}
+                className={`flex-1 py-4 rounded-2xl font-bold text-white shadow-lg active:scale-95 transition ${saved ? 'bg-green-500' : 'bg-gradient-to-r from-green-400 to-emerald-500'}`}>
+                {saved ? '✅ 저장 완료!' : '💾 저장하기'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 그리기 캔버스 오버레이 */}
+      {showDrawing && (
+        <ReviewDrawingCanvas initialData={drawingData} onSave={(data) => { setDrawingData(data); setShowDrawing(false); }} onCancel={() => setShowDrawing(false)} />
+      )}
+    </div>
+  );
+}
+
+/* --- Report Gallery (감상문 보기) --- */
+function ReportGallery({ bookName, onExit, onEdit }) {
+  const [reports, setReports] = useState(() => loadReports());
+  const [confirmDel, setConfirmDel] = useState(null);
+  const [viewReport, setViewReport] = useState(null);
+  const thisBook = bookName ? reports.filter(r => r.bookName === bookName) : [];
+  const otherBooks = bookName ? reports.filter(r => r.bookName !== bookName) : reports;
+
+  const handleDelete = (id) => { removeReport(id); setReports(loadReports()); setConfirmDel(null); };
+
+  const Card = ({ report }) => (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="h-28 bg-gray-100 flex items-center justify-center overflow-hidden cursor-pointer"
+           onClick={() => setViewReport(report)}>
+        {report.thumbnail ? <img src={report.thumbnail} className="w-full h-full object-cover" /> : <span className="text-4xl">📝</span>}
+      </div>
+      <div className="p-2.5">
+        <h4 className="text-xs font-bold text-gray-700 truncate">{report.title || '제목 없음'}</h4>
+        <p className="text-[10px] text-gray-400 mt-0.5">📖 {report.bookName}</p>
+        <p className="text-[10px] text-gray-400">{new Date(report.updatedAt).toLocaleDateString('ko-KR')}</p>
+        {report.bodyText && <p className="text-[10px] text-gray-500 mt-1 line-clamp-2">{report.bodyText}</p>}
+        <div className="flex gap-1.5 mt-2">
+          <button onClick={() => onEdit(report)} className="flex-1 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-semibold active:scale-95">수정</button>
+          <button onClick={() => setConfirmDel(report.id)} className="py-1.5 px-2 rounded-lg bg-red-50 text-red-500 text-[10px] font-semibold active:scale-95">🗑</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="w-full h-full flex flex-col bg-gray-50 relative">
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 shrink-0">
+        <button onClick={onExit} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-base active:scale-95">←</button>
+        <span className="text-sm font-bold text-gray-700">내 감상문 모아보기</span>
+        <span className="text-xs text-gray-400">{reports.length}편</span>
+      </div>
+      <div className="flex-1 overflow-auto p-4">
+        {reports.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <span className="text-5xl">📒</span>
+            <p className="text-sm text-gray-400">아직 작성한 감상문이 없어요</p>
+          </div>
+        ) : (
+          <>
+            {thisBook.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-xs font-bold text-gray-500 mb-2">📖 {bookName}</h3>
+                <div className="grid grid-cols-2 gap-3">{thisBook.map(r => <Card key={r.id} report={r} />)}</div>
+              </div>
+            )}
+            {otherBooks.length > 0 && (
+              <div>
+                <h3 className="text-xs font-bold text-gray-500 mb-2">{bookName ? '다른 도서' : '전체 감상문'}</h3>
+                <div className="grid grid-cols-2 gap-3">{otherBooks.map(r => <Card key={r.id} report={r} />)}</div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* View detail modal */}
+      {viewReport && (
+        <div className="absolute inset-0 z-40 bg-white flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+            <button onClick={() => setViewReport(null)} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-base active:scale-95">←</button>
+            <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]">{viewReport.title || '제목 없음'}</span>
+            <button onClick={() => { onEdit(viewReport); }} className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-xs font-bold active:scale-95">수정</button>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            <p className="text-[11px] text-gray-400 mb-1">📖 {viewReport.bookName} · {new Date(viewReport.updatedAt).toLocaleDateString('ko-KR')}</p>
+            {viewReport.drawingData && (
+              <div className="mb-3 rounded-lg overflow-hidden border border-gray-200">
+                <img src={viewReport.drawingData} className="w-full" />
+              </div>
+            )}
+            <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{viewReport.bodyText || '(내용 없음)'}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDel && (
+        <div className="absolute inset-0 z-50 bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-5 mx-8 shadow-xl">
+            <p className="text-sm font-semibold text-gray-700 mb-4">이 감상문을 삭제할까요?</p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDel(null)} className="flex-1 py-2 rounded-lg bg-gray-100 text-sm text-gray-600 font-semibold">취소</button>
+              <button onClick={() => handleDelete(confirmDel)} className="flex-1 py-2 rounded-lg bg-red-500 text-sm text-white font-bold">삭제</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   LAUNCHER — File picker + mode select
+   ══════════════════════════════════════════════ */
+
 const SAMPLE_BOOKS = [
   {
     id: 'scholastic_3cats',
