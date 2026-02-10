@@ -34,7 +34,7 @@
 
 ## 🎨 사용자 타입 (3-Tier)
 
-### Type 1: 전용 패드 정규 회원 🏢
+### Type 1: 전용 패드 회원 🏢
 ```
 is_woongjin_device = true
 is_member = true
@@ -50,7 +50,7 @@ is_member = true
 [🚪 로그아웃] [🏠 서비스 나가기]
 ```
 
-### Type 2: 개인 패드 정규 회원 👤
+### Type 2: 개인 패드 회원 👤
 ```
 is_woongjin_device = false
 is_member = true
@@ -66,7 +66,7 @@ is_member = true
 [🚪 로그아웃]
 ```
 
-### Type 3: 개인 패드 일반 회원 🎈
+### Type 3: 일반 회원 🎈
 ```
 is_woongjin_device = false
 is_member = false
