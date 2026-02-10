@@ -132,8 +132,6 @@ function App() {
   const [bluelight, setBluelight] = useState(true);
   const [wifi, setWifi] = useState(true);
 
-  // 앱 설정 상태
-  const [notifications, setNotifications] = useState(true);
 
   // 비밀번호 팝업 상태
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -228,7 +226,7 @@ function App() {
 
           {/* 북클럽 3.0 전용 기능 (공통) */}
           <Section title="🎨 북클럽 3.0 전용 기능">
-            <SettingItem label="AI 독서 버디" type="toggle" value={notifications} onChange={setNotifications} />
+            <SettingItem label="AI 독서 버디" type="toggle" value={true} onChange={() => {}} />
           </Section>
 
           {/* 기기 제어 (전용 패드 전용) */}
@@ -266,12 +264,6 @@ function App() {
             </Section>
           )}
 
-          {/* 앱 설정 (공통) */}
-          <Section title="🔔 앱 설정">
-            <SettingItem label="알림 허용" type="toggle" value={notifications} onChange={setNotifications} />
-            <div className="text-sm text-gray-500">버전 1.0.0</div>
-          </Section>
-
           {/* 계정 관리 */}
           <Section
             title="👤 계정 관리"
@@ -307,6 +299,11 @@ function App() {
               </button>
             </div>
           )}
+
+          {/* 앱 버전 정보 */}
+          <div className="text-center text-sm text-gray-400 py-4">
+            버전 1.0.0
+          </div>
         </div>
       </div>
 
