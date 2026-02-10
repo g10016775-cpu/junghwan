@@ -50,6 +50,25 @@ html,body,#root{width:100%;height:100%;overflow:hidden;background:#fff}
 .dict-popup .dp-action-ul{background:#FFF0F0;color:#C53030}
 .dict-popup .dp-loading{text-align:center;padding:20px;color:#888;font-size:13px}
 .dict-popup .dp-error{text-align:center;padding:20px;color:#e53e3e;font-size:13px}
+
+/* ── AI 버디 애니메이션 ── */
+@keyframes buddy-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes buddy-enter{0%{transform:scale(0) translateY(40px);opacity:0}60%{transform:scale(1.1) translateY(-5px)}100%{transform:scale(1) translateY(0);opacity:1}}
+@keyframes bubble-in{0%{transform:scale(0.5) translateY(10px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+@keyframes confetti-fall{0%{transform:translateY(-10vh) rotate(0);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 8px rgba(255,183,77,0.4)}50%{box-shadow:0 0 20px rgba(255,183,77,0.8)}}
+@keyframes slide-up{0%{transform:translateY(20px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes anim-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes tail-wag{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(15deg)}}
+.buddy-bounce{animation:buddy-bounce 2s ease-in-out infinite}
+.buddy-enter{animation:buddy-enter 0.5s ease-out both}
+.bubble-in{animation:bubble-in 0.3s ease-out both}
+.confetti{animation:confetti-fall 3s linear both}
+.pulse-glow{animation:pulse-glow 2s ease-in-out infinite}
+.anim-slide-up{animation:slide-up 0.4s ease-out both}
+.anim-float{animation:anim-float 3s ease-in-out infinite}
+.tail-wag{animation:tail-wag 0.4s ease-in-out infinite}
+
 </style>
 </head>
 <body>
@@ -364,6 +383,478 @@ function DictPopup({ word, rect, containerRect, onHighlight, onUnderline, onClos
   );
 }
 
+
+/* ══════════════════════════════════════
+   SVG 다람쥐 캐릭터 (감정별 5종)
+   ══════════════════════════════════════ */
+function SquirrelBuddy({ emotion = 'kind', size = 80, animate = true }) {
+  const emotions = {
+    kind:    { eyeShape:'normal', mouthShape:'smile',  cheekOpacity:0.6, bodyColor:'#8B5E3C', tailWag:false, extraClass:'' },
+    excited: { eyeShape:'sparkle', mouthShape:'bigSmile', cheekOpacity:0.8, bodyColor:'#8B5E3C', tailWag:true, extraClass:'buddy-bounce' },
+    comfort: { eyeShape:'sad', mouthShape:'worried', cheekOpacity:0.3, bodyColor:'#8B5E3C', tailWag:false, extraClass:'' },
+    study:   { eyeShape:'determined', mouthShape:'grin', cheekOpacity:0.5, bodyColor:'#8B5E3C', tailWag:false, extraClass:'' },
+    sleepy:  { eyeShape:'closed', mouthShape:'sleepy', cheekOpacity:0.4, bodyColor:'#8B5E3C', tailWag:false, extraClass:'anim-float' },
+  };
+  const e = emotions[emotion] || emotions.kind;
+  const renderEyes = () => {
+    switch(e.eyeShape) {
+      case 'sparkle':
+        return (<>
+          <circle cx="38" cy="42" r="5" fill="#2D1B0E"/><circle cx="62" cy="42" r="5" fill="#2D1B0E"/>
+          <circle cx="40" cy="40" r="2" fill="white"/><circle cx="64" cy="40" r="2" fill="white"/>
+          <path d="M35 35 L37 33 L39 35 L37 37Z" fill="white" opacity="0.8"><animateTransform attributeName="transform" type="rotate" values="0 37 35;360 37 35" dur="2s" repeatCount="indefinite"/></path>
+          <path d="M59 35 L61 33 L63 35 L61 37Z" fill="white" opacity="0.8"><animateTransform attributeName="transform" type="rotate" values="0 61 35;360 61 35" dur="2s" repeatCount="indefinite"/></path>
+        </>);
+      case 'sad':
+        return (<>
+          <ellipse cx="38" cy="44" rx="4" ry="5" fill="#2D1B0E"/><ellipse cx="62" cy="44" rx="4" ry="5" fill="#2D1B0E"/>
+          <circle cx="39" cy="42" r="1.5" fill="white" opacity="0.8"/><circle cx="63" cy="42" r="1.5" fill="white" opacity="0.8"/>
+          <path d="M33 37 Q38 39 43 37" stroke="#2D1B0E" strokeWidth="1.5" fill="none"/>
+          <path d="M57 37 Q62 39 67 37" stroke="#2D1B0E" strokeWidth="1.5" fill="none"/>
+        </>);
+      case 'determined':
+        return (<>
+          <circle cx="38" cy="42" r="4.5" fill="#2D1B0E"/><circle cx="62" cy="42" r="4.5" fill="#2D1B0E"/>
+          <circle cx="39" cy="41" r="1.5" fill="white"/><circle cx="63" cy="41" r="1.5" fill="white"/>
+          <line x1="33" y1="36" x2="43" y2="34" stroke="#2D1B0E" strokeWidth="2" strokeLinecap="round"/>
+          <line x1="57" y1="34" x2="67" y2="36" stroke="#2D1B0E" strokeWidth="2" strokeLinecap="round"/>
+        </>);
+      case 'closed':
+        return (<>
+          <path d="M33 42 Q38 46 43 42" stroke="#2D1B0E" strokeWidth="2" fill="none" strokeLinecap="round"/>
+          <path d="M57 42 Q62 46 67 42" stroke="#2D1B0E" strokeWidth="2" fill="none" strokeLinecap="round"/>
+        </>);
+      default:
+        return (<>
+          <circle cx="38" cy="42" r="4.5" fill="#2D1B0E"/><circle cx="62" cy="42" r="4.5" fill="#2D1B0E"/>
+          <circle cx="40" cy="41" r="1.8" fill="white"/><circle cx="64" cy="41" r="1.8" fill="white"/>
+        </>);
+    }
+  };
+  const renderMouth = () => {
+    switch(e.mouthShape) {
+      case 'bigSmile': return <path d="M42 54 Q50 62 58 54" stroke="#2D1B0E" strokeWidth="2" fill="#FF8A80" strokeLinecap="round"/>;
+      case 'worried':  return <path d="M43 56 Q50 52 57 56" stroke="#2D1B0E" strokeWidth="1.8" fill="none" strokeLinecap="round"/>;
+      case 'grin':     return (<><path d="M43 53 Q50 58 57 53" stroke="#2D1B0E" strokeWidth="2" fill="none" strokeLinecap="round"/><line x1="50" y1="53" x2="50" y2="56" stroke="#2D1B0E" strokeWidth="1" strokeLinecap="round"/></>);
+      case 'sleepy':   return <path d="M45 55 Q50 57 55 55" stroke="#2D1B0E" strokeWidth="1.5" fill="none" strokeLinecap="round"/>;
+      default:         return <path d="M43 53 Q50 59 57 53" stroke="#2D1B0E" strokeWidth="2" fill="none" strokeLinecap="round"/>;
+    }
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" className={animate ? e.extraClass : ''}>
+      <g className={e.tailWag ? 'tail-wag' : ''} style={{transformOrigin:'30px 70px'}}>
+        <path d="M25 70 Q5 45 15 25 Q25 15 30 30 Q32 45 28 65" fill="#C67C4E" stroke="#A0622E" strokeWidth="1"/>
+        <path d="M20 55 Q10 40 18 28" stroke="#D4956B" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.5"/>
+      </g>
+      <ellipse cx="50" cy="72" rx="22" ry="18" fill={e.bodyColor}/>
+      <ellipse cx="50" cy="74" rx="16" ry="12" fill="#D4956B"/>
+      <circle cx="50" cy="42" r="24" fill={e.bodyColor}/>
+      <ellipse cx="32" cy="22" rx="8" ry="10" fill={e.bodyColor} transform="rotate(-15 32 22)"/>
+      <ellipse cx="32" cy="22" rx="5" ry="7" fill="#D4956B" transform="rotate(-15 32 22)"/>
+      <ellipse cx="68" cy="22" rx="8" ry="10" fill={e.bodyColor} transform="rotate(15 68 22)"/>
+      <ellipse cx="68" cy="22" rx="5" ry="7" fill="#D4956B" transform="rotate(15 68 22)"/>
+      <ellipse cx="50" cy="48" rx="18" ry="14" fill="#D4956B"/>
+      <circle cx="30" cy="50" r="5" fill="#FF9999" opacity={e.cheekOpacity}/>
+      <circle cx="70" cy="50" r="5" fill="#FF9999" opacity={e.cheekOpacity}/>
+      {renderEyes()}
+      <ellipse cx="50" cy="48" rx="3" ry="2.5" fill="#2D1B0E"/>
+      {renderMouth()}
+      <ellipse cx="30" cy="68" rx="6" ry="4" fill={e.bodyColor} transform="rotate(20 30 68)"/>
+      <ellipse cx="70" cy="68" rx="6" ry="4" fill={e.bodyColor} transform="rotate(-20 70 68)"/>
+      {emotion === 'sleepy' && (<>
+        <text x="70" y="25" fontSize="10" fill="#7C8DB5" fontWeight="bold" opacity="0.7">z<animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/></text>
+        <text x="78" y="18" fontSize="8" fill="#7C8DB5" fontWeight="bold">z<animate attributeName="opacity" values="0;1;0" dur="2s" begin="0.5s" repeatCount="indefinite"/></text>
+        <text x="84" y="12" fontSize="6" fill="#7C8DB5" fontWeight="bold">z<animate attributeName="opacity" values="0;1;0" dur="2s" begin="1s" repeatCount="indefinite"/></text>
+      </>)}
+      {emotion === 'study' && (
+        <g><rect x="28" y="28" width="44" height="6" rx="3" fill="#FF6B6B" opacity="0.9"/><text x="50" y="34" fontSize="5" fill="white" textAnchor="middle" fontWeight="bold">열공!</text></g>
+      )}
+    </svg>
+  );
+}
+
+/* ══════════════════════════════════════
+   말풍선 컴포넌트
+   ══════════════════════════════════════ */
+function SpeechBubble({ message, buttons, onButton, onClose }) {
+  return (
+    <div className="bubble-in absolute bottom-full right-0 mb-2 w-64" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-xl p-4 relative" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.15))'}}>
+        <button onClick={onClose} className="absolute top-2 right-2 w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs hover:bg-gray-200">✕</button>
+        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap pr-5 font-medium">{message}</p>
+        {buttons && buttons.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {buttons.map((b, i) => (
+              <button key={i} onClick={() => onButton(b.action)}
+                className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 active:scale-95 transition">
+                {b.label}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="absolute -bottom-2 right-6 w-4 h-4 bg-white transform rotate-45" style={{filter:'drop-shadow(2px 2px 2px rgba(0,0,0,0.05))'}}/>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   컨페티 이펙트
+   ══════════════════════════════════════ */
+function BuddyConfetti() {
+  const colors = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6EC7','#A855F7'];
+  const pieces = useMemo(() => Array.from({length:40}, (_,i) => ({
+    id:i, left: Math.random()*100, delay: Math.random()*2, dur: 2+Math.random()*2,
+    color: colors[Math.floor(Math.random()*colors.length)], size: 6+Math.random()*8,
+    type: Math.random()>0.5?'circle':'rect'
+  })), []);
+  return (
+    <div className="absolute inset-0 z-[60] pointer-events-none overflow-hidden">
+      {pieces.map(p => (
+        <div key={p.id} className="confetti absolute" style={{
+          left:`${p.left}%`, top:'-20px', animationDelay:`${p.delay}s`, animationDuration:`${p.dur}s`,
+          width:p.size, height:p.size, backgroundColor:p.color,
+          borderRadius: p.type==='circle'?'50%':'2px',
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   AI 버디 - 읽기 동반자 시스템
+   (시선추적 기반 이탈감지 + 졸음방지)
+   ══════════════════════════════════════ */
+const READING_GOALS = [
+  { id:'light',  label:'조금만',  pages:5,        emoji:'🌱' },
+  { id:'normal', label:'보통',    pages:10,       emoji:'📖' },
+  { id:'much',   label:'많이!',   pages:20,       emoji:'🔥' },
+  { id:'all',    label:'끝까지!', pages:Infinity, emoji:'🚀' },
+];
+
+/* 시선추적 기반 이탈 시나리오 정의
+   gazeState: onText(정상) | offScreen(화면밖) | wandering(방황) | fixed(고정멍) | drowsy(졸음) */
+const GAZE_SCENARIOS = {
+  // 시선이 텍스트 밖으로 벗어남 (화면 밖 응시)
+  offScreen: [
+    { stage:1, delay:10, action:'bubble',  msg:'이쪽이야~ 같이 읽자! 👀' },
+    { stage:2, delay:25, action:'bubble',  msg:'혹시 다른 거 궁금한 게 있어? 🤔' },
+    { stage:3, delay:50, action:'bookmark', msg:'잠깐 쉬고 올래? 여기 표시해둘게 📌' },
+  ],
+  // 시선이 화면 내 이곳저곳 방황
+  wandering: [
+    { stage:1, delay:15, action:'bubble',  msg:'재미있는 부분 찾고 있어? 😊' },
+    { stage:2, delay:35, action:'bubble',  msg:'여기 그림이 있어! 같이 볼까? 🎨' },
+    { stage:3, delay:55, action:'bubble',  msg:'어려우면 천천히 읽어도 괜찮아~ 💪' },
+  ],
+  // 시선이 한 곳에 고정 (멍 때리기)
+  fixed: [
+    { stage:1, delay:15, action:'bubble',  msg:'무슨 생각해? 🐿️' },
+    { stage:2, delay:40, action:'bubble',  msg:'이 부분 어려워? 다시 읽어볼까? 📖' },
+    { stage:3, delay:80, action:'bookmark', msg:'좀 쉬었다 읽을까? 여기 기억해둘게! 🔖' },
+  ],
+  // 졸음 감지 (눈 감김 빈도 증가 / 고개 떨어짐)
+  drowsy: [
+    { stage:1, delay:5,  action:'bubble',  msg:'눈이 감기고 있어! 깜빡깜빡~ 👁️' },
+    { stage:2, delay:12, action:'stretch', msg:'기지개 한 번 펴볼까? 쭈욱~! 🙆' },
+    { stage:3, delay:22, action:'break',   msg:'잠깐 쉬는 시간! 1분만 쉬고 오자 ⏰' },
+  ],
+};
+
+/* 스트레칭 안내 메시지 */
+const STRETCH_GUIDES = [
+  '두 팔을 위로 쭉 뻗어봐! 🙆',
+  '목을 천천히 돌려보자! 좌~우~ 🔄',
+  '눈을 꽉 감았다가 크게 떠봐! 👀',
+  '어깨를 으쓱으쓱 올렸다 내려봐! 💪',
+  '손가락을 쫙 폈다 주먹 쥐어봐! ✊',
+];
+
+/* ══════════════════════════════════════
+   버디 미니메뉴 (Pull-based)
+   ══════════════════════════════════════ */
+function BuddyMiniMenu({ onAction, readPages, goalPages, totalPages, onClose }) {
+  const progress = goalPages === Infinity
+    ? Math.round((readPages / Math.max(totalPages, 1)) * 100)
+    : Math.min(100, Math.round((readPages / goalPages) * 100));
+  return (
+    <div className="absolute bottom-full right-0 mb-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden anim-pop" onClick={e => e.stopPropagation()}>
+      <div className="px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-100">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-bold text-gray-600">오늘의 읽기 목표</span>
+          <span className="text-xs font-bold text-amber-600">{goalPages === Infinity ? `${readPages}p` : `${readPages}/${goalPages}p`}</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all duration-500" style={{width:`${Math.min(100,progress)}%`}}/>
+        </div>
+      </div>
+      <div className="p-2 space-y-0.5">
+        {[
+          {action:'rest',  icon:'⏸️', label:'잠깐 쉴래'},
+          {action:'stretch',icon:'🙆', label:'스트레칭!'},
+          {action:'report',icon:'📊', label:'내 읽기 기록'},
+          {action:'write', icon:'✏️', label:'감상문 쓰기'},
+        ].map(item => (
+          <button key={item.action} onClick={() => onAction(item.action)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-50 transition text-left">
+            <span className="text-lg">{item.icon}</span>
+            <span className="text-sm font-semibold text-gray-700">{item.label}</span>
+          </button>
+        ))}
+      </div>
+      <button onClick={onClose} className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 border-t border-gray-100 transition">닫기</button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   읽기 목표 선택 오버레이
+   ══════════════════════════════════════ */
+function ReadingGoalOverlay({ onSelect, bookTitle }) {
+  return (
+    <div className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 anim-slide-up">
+        <div className="text-center mb-5">
+          <div className="text-5xl mb-3">🐿️</div>
+          <h3 className="font-black text-lg text-gray-800">오늘은 얼마나 읽을까?</h3>
+          <p className="text-sm text-gray-400 mt-1">{bookTitle}</p>
+        </div>
+        <div className="space-y-2.5">
+          {READING_GOALS.map(g => (
+            <button key={g.id} onClick={() => onSelect(g)}
+              className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-gray-50 hover:bg-amber-50 border-2 border-transparent hover:border-amber-200 transition active:scale-[0.98]">
+              <span className="text-3xl">{g.emoji}</span>
+              <div className="text-left">
+                <span className="font-bold text-gray-700">{g.label}</span>
+                <span className="text-sm text-gray-400 ml-2">{g.pages === Infinity ? '전부 다!' : `${g.pages}페이지`}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   읽기 리포트 카드
+   ══════════════════════════════════════ */
+function ReadingReportCard({ data, onClose }) {
+  const { readPages, totalTime, focusedPages, skippedPages, goalPages } = data;
+  const avgTime = readPages > 0 ? Math.round(totalTime / readPages) : 0;
+  const goalMet = goalPages !== Infinity ? readPages >= goalPages : readPages >= data.totalPages;
+  return (
+    <div className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 anim-slide-up">
+        <div className="text-center mb-5">
+          <div className="text-5xl mb-2">{goalMet ? '🎉' : '📊'}</div>
+          <h3 className="font-black text-lg text-gray-800">오늘의 읽기 리포트</h3>
+        </div>
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between px-4 py-3 bg-blue-50 rounded-xl">
+            <span className="text-sm text-gray-600">⏱️ 총 읽기 시간</span>
+            <span className="font-bold text-blue-600">{Math.floor(totalTime/60)}분 {totalTime%60}초</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 bg-amber-50 rounded-xl">
+            <span className="text-sm text-gray-600">📖 읽은 페이지</span>
+            <span className="font-bold text-amber-600">{readPages}페이지</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 bg-green-50 rounded-xl">
+            <span className="text-sm text-gray-600">🔥 집중 구간</span>
+            <span className="font-bold text-green-600">{focusedPages.length > 0 ? `${focusedPages[0]}~${focusedPages[focusedPages.length-1]}p` : '-'}</span>
+          </div>
+          {skippedPages.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 bg-red-50 rounded-xl">
+              <span className="text-sm text-gray-600">⚡ 빠르게 넘긴</span>
+              <span className="font-bold text-red-500">{skippedPages.length}페이지</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between px-4 py-3 bg-purple-50 rounded-xl">
+            <span className="text-sm text-gray-600">📈 평균 속도</span>
+            <span className="font-bold text-purple-600">{avgTime}초/페이지</span>
+          </div>
+        </div>
+        <div className="mt-4 p-3 bg-amber-50 rounded-xl text-center">
+          <span className="text-sm font-bold text-amber-700">
+            🐿️ {goalMet ? '"목표 달성! 정말 대단해!"' : `"${readPages}페이지나 읽었어! 잘했어!"`}
+          </span>
+        </div>
+        <button onClick={onClose}
+          className="w-full mt-4 py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold shadow active:scale-95 transition">
+          확인
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   시나리오 테스트 패널 (새 버디 시스템)
+   ══════════════════════════════════════ */
+function BuddyTestPanel({ open, onToggle, buddyState, gazeState, onSimulate, data }) {
+  if (!open) return (
+    <button onClick={onToggle} className="fixed top-2 left-2 z-[80] px-3 py-1.5 rounded-lg bg-green-600/90 text-white text-xs font-bold backdrop-blur-sm hover:bg-green-500 transition" data-no-swipe="true">
+      ● 테스트 모드
+    </button>
+  );
+
+  const stateColors = { reading:'bg-green-400', happy:'bg-yellow-400', sleepy:'bg-gray-400', stretch:'bg-emerald-400' };
+  const stateLabels = { reading:'📖 읽기', happy:'🎉 기쁨', sleepy:'😴 졸림', stretch:'🙆 스트레칭' };
+  const gazeColors = { onText:'bg-green-400', offScreen:'bg-orange-400', wandering:'bg-yellow-400', fixed:'bg-purple-400', drowsy:'bg-red-400' };
+  const gazeLabels = { onText:'👁️ 정상', offScreen:'🚫 화면밖', wandering:'👀 방황', fixed:'😶 고정', drowsy:'😴 졸음' };
+
+  return (
+    <div className="fixed top-2 left-2 z-[80] w-80 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl text-sm overflow-hidden border border-gray-200" style={{maxHeight:'calc(100vh - 16px)'}} data-no-swipe="true">
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
+        <span className="font-black text-gray-800">● <span className="text-green-600">테스트 모드</span></span>
+        <button onClick={onToggle} className="text-gray-400 hover:text-gray-600 text-xs font-bold px-2 py-1 rounded hover:bg-gray-100">✕</button>
+      </div>
+      <div className="p-4 space-y-4 overflow-y-auto" style={{maxHeight:'calc(100vh - 70px)'}}>
+
+        {/* 버디 상태 */}
+        <div>
+          <h3 className="font-bold text-gray-800 text-xs mb-2">🐿️ 버디 상태</h3>
+          <div className="flex gap-1">
+            {Object.entries(stateLabels).map(([key, label]) => (
+              <button key={key} onClick={() => onSimulate('setState', key)}
+                className={`flex-1 py-1.5 rounded-lg text-center text-[10px] font-bold transition-all ${buddyState === key ? stateColors[key] + ' text-white ring-2 ring-offset-1 ring-blue-500 scale-105 shadow-md' : 'bg-gray-100 text-gray-400'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <hr className="border-gray-200"/>
+
+        {/* 시선추적 상태 시뮬레이션 */}
+        <div>
+          <h3 className="font-bold text-gray-600 text-xs mb-2">👁️ 시선추적 상태 (실시간 전환)</h3>
+          <div className="grid grid-cols-3 gap-1 mb-2">
+            {Object.entries(gazeLabels).map(([key, label]) => (
+              <button key={key} onClick={() => onSimulate('gaze', key)}
+                className={`py-1.5 rounded-lg text-center text-[10px] font-bold transition-all ${gazeState === key ? gazeColors[key] + ' text-white ring-2 ring-offset-1 ring-blue-500 scale-105 shadow-md' : 'bg-gray-100 text-gray-400'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400">* 상태 선택 시 자동으로 단계적 시나리오가 진행됩니다</p>
+        </div>
+
+        <hr className="border-gray-200"/>
+
+        {/* 시나리오 즉시 테스트 */}
+        <div>
+          <h3 className="font-bold text-gray-600 text-xs mb-2">🎬 시나리오 즉시 재생</h3>
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-gray-400 font-bold">화면 밖 응시</p>
+            <div className="grid grid-cols-3 gap-1">
+              {[1,2,3].map(s => (
+                <button key={s} onClick={() => onSimulate('gazeStage', ['offScreen', s])}
+                  className="py-1.5 rounded-lg text-[10px] font-bold bg-orange-100 text-orange-600 hover:bg-orange-200 transition">{s}단계</button>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 font-bold mt-1">시선 방황</p>
+            <div className="grid grid-cols-3 gap-1">
+              {[1,2,3].map(s => (
+                <button key={s} onClick={() => onSimulate('gazeStage', ['wandering', s])}
+                  className="py-1.5 rounded-lg text-[10px] font-bold bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition">{s}단계</button>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 font-bold mt-1">멍때리기 (고정)</p>
+            <div className="grid grid-cols-3 gap-1">
+              {[1,2,3].map(s => (
+                <button key={s} onClick={() => onSimulate('gazeStage', ['fixed', s])}
+                  className="py-1.5 rounded-lg text-[10px] font-bold bg-purple-100 text-purple-600 hover:bg-purple-200 transition">{s}단계</button>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-400 font-bold mt-1">졸음 감지</p>
+            <div className="grid grid-cols-3 gap-1">
+              {[1,2,3].map(s => (
+                <button key={s} onClick={() => onSimulate('gazeStage', ['drowsy', s])}
+                  className="py-1.5 rounded-lg text-[10px] font-bold bg-red-100 text-red-600 hover:bg-red-200 transition">{s}단계</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <hr className="border-gray-200"/>
+
+        {/* 기타 시나리오 */}
+        <div>
+          <h3 className="font-bold text-gray-600 text-xs mb-2">📖 기타 시나리오</h3>
+          <div className="space-y-1.5">
+            <button onClick={() => onSimulate('goalPicker')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-green-500 opacity-80 hover:opacity-100 transition-all">
+              <span>🎯</span><span>읽기 목표 선택</span>
+            </button>
+            <button onClick={() => onSimulate('bubble', '안녕! 같이 읽자! 📖')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-teal-500 opacity-80 hover:opacity-100 transition-all">
+              <span>🌟</span><span>환영 인사</span>
+            </button>
+            <button onClick={() => onSimulate('bubble', '혹시 이 부분 어려워? 괜찮아~ 😊')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-red-400 opacity-80 hover:opacity-100 transition-all">
+              <span>⚡</span><span>빠른 넘김 감지</span>
+            </button>
+            <button onClick={() => onSimulate('stretch')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-emerald-500 opacity-80 hover:opacity-100 transition-all">
+              <span>🙆</span><span>스트레칭 가이드</span>
+            </button>
+            <button onClick={() => onSimulate('breakTimer')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-amber-500 opacity-80 hover:opacity-100 transition-all">
+              <span>⏰</span><span>쉬는 시간 타이머</span>
+            </button>
+            <button onClick={() => onSimulate('menu')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-blue-500 opacity-80 hover:opacity-100 transition-all">
+              <span>📋</span><span>미니메뉴 열기</span>
+            </button>
+          </div>
+        </div>
+
+        <hr className="border-gray-200"/>
+
+        {/* 진척도 */}
+        <div>
+          <h3 className="font-bold text-gray-600 text-xs mb-2">📊 진척도 / 보상</h3>
+          <div className="space-y-1.5">
+            <button onClick={() => onSimulate('goalMet')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-amber-500 opacity-80 hover:opacity-100 transition-all">
+              <span>🎯</span><span>목표 달성 (컨페티)</span>
+            </button>
+            <button onClick={() => onSimulate('complete')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-red-500 opacity-80 hover:opacity-100 transition-all">
+              <span>🎉</span><span>완독 축하 (컨페티)</span>
+            </button>
+            <button onClick={() => onSimulate('report')}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-sm text-white bg-indigo-500 opacity-80 hover:opacity-100 transition-all">
+              <span>📊</span><span>읽기 리포트 보기</span>
+            </button>
+          </div>
+        </div>
+
+        <hr className="border-gray-200"/>
+
+        {/* 데이터 모니터링 */}
+        <div>
+          <h3 className="font-bold text-gray-600 text-xs mb-2">📡 실시간 데이터</h3>
+          <div className="bg-gray-50 rounded-xl p-3 space-y-1 text-xs">
+            <div className="flex justify-between"><span className="text-gray-400">버디 상태</span><span className="font-bold text-gray-700">{stateLabels[data.buddyState] || '-'}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">시선 상태</span><span className={`font-bold ${gazeColors[data.gazeState]?.replace('bg-','text-') || 'text-gray-700'}`}>{gazeLabels[data.gazeState] || '-'}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">이탈 단계</span><span className="font-bold text-gray-700">{data.gazeStage}/3</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">세션 시간</span><span className="font-bold text-gray-700">{String(Math.floor(data.sessionTime/60)).padStart(2,'0')}:{String(data.sessionTime%60).padStart(2,'0')}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">페이지 체류</span><span className="font-bold text-gray-700">{data.pageTime}초</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">현재 페이지</span><span className="font-bold text-gray-700">{data.page} / {data.totalPages}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">읽은 페이지</span><span className="font-bold text-gray-700">{data.readPages}p</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">읽기 목표</span><span className="font-bold text-gray-700">{data.goalLabel || '미설정'}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">빠른넘김</span><span className="font-bold text-gray-700">{data.fastFlipCount}</span></div>
+            <div className="flex justify-between"><span className="text-gray-400">연속읽기</span><span className="font-bold text-gray-700">{data.steadyCount}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 /* ══════════════════════════════════════════════
    PDF BOOK VIEWER — pdf.js canvas rendering
    ══════════════════════════════════════════════ */
@@ -388,6 +879,276 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   const canvas2Ref = useRef(null);
   const renderTask2Ref = useRef(null);
   const autoTimerRef = useRef(null);
+
+  // ── AI 버디 - 읽기 동반자 상태 ──
+  const [buddyVisible, setBuddyVisible] = useState(false);
+  const [buddyState, setBuddyState] = useState('reading'); // reading | happy | sleepy | stretch
+  const [buddyMenuOpen, setBuddyMenuOpen] = useState(false);
+  const [bubbleMsg, setBubbleMsg] = useState(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showGoalPicker, setShowGoalPicker] = useState(false);
+  const [readingGoal, setReadingGoal] = useState(null);
+  const [showReport, setShowReport] = useState(false);
+  const [buddySessionTime, setBuddySessionTime] = useState(0);
+  const [buddyPageTime, setBuddyPageTime] = useState(0);
+  const [fastFlipCount, setFastFlipCount] = useState(0);
+  const [steadyCount, setSteadyCount] = useState(0);
+  const [startPage, setStartPage] = useState(1);
+  const [pageTimeMap, setPageTimeMap] = useState({});
+  const lastFlipRef = useRef(Date.now());
+  const lastFlipDir = useRef('forward');
+  const triggeredRef = useRef(new Set());
+  const idleStageRef = useRef(0);
+  const [testPanelOpen, setTestPanelOpen] = useState(false);
+  // ── 시선추적 기반 상태 ──
+  const [gazeState, setGazeState] = useState('onText'); // onText | offScreen | wandering | fixed | drowsy
+  const [showStretchGuide, setShowStretchGuide] = useState(false);
+  const [showBreakTimer, setShowBreakTimer] = useState(false);
+  const [breakTimeLeft, setBreakTimeLeft] = useState(60);
+  const gazeTimerRef = useRef(null);
+  const gazeStageRef = useRef(0);
+
+  // ── 세션 타이머 ──
+  useEffect(() => {
+    const t = setInterval(() => setBuddySessionTime(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // ── 페이지 체류 타이머 ──
+  useEffect(() => {
+    setBuddyPageTime(0);
+    const t = setInterval(() => setBuddyPageTime(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [page]);
+
+  // ── 시선추적 기반 이탈/졸음 감지 ──
+  useEffect(() => {
+    // gazeState가 정상(onText)이면 타이머 초기화
+    if (gazeState === 'onText') {
+      gazeStageRef.current = 0;
+      if (gazeTimerRef.current) { clearInterval(gazeTimerRef.current); gazeTimerRef.current = null; }
+      setBuddyState(prev => prev === 'sleepy' || prev === 'stretch' ? 'reading' : prev);
+      return;
+    }
+    // 비정상 시선 상태 시작 → 단계적 시나리오 진행
+    const scenarios = GAZE_SCENARIOS[gazeState];
+    if (!scenarios) return;
+    let elapsed = 0;
+    gazeStageRef.current = 0;
+    gazeTimerRef.current = setInterval(() => {
+      elapsed++;
+      const nextScenario = scenarios.find(s => s.delay === elapsed && gazeStageRef.current < s.stage);
+      if (!nextScenario) return;
+      gazeStageRef.current = nextScenario.stage;
+      switch(nextScenario.action) {
+        case 'bubble':
+          setBubbleMsg(nextScenario.msg);
+          setTimeout(() => setBubbleMsg(null), 5000);
+          break;
+        case 'bookmark':
+          setBubbleMsg(nextScenario.msg);
+          // 자동 북마크 기능 (실제로는 서버 저장)
+          break;
+        case 'stretch':
+          setBuddyState('stretch');
+          setShowStretchGuide(true);
+          setBubbleMsg(nextScenario.msg);
+          break;
+        case 'break':
+          setBubbleMsg(nextScenario.msg);
+          setShowBreakTimer(true);
+          setBreakTimeLeft(60);
+          break;
+      }
+    }, 1000);
+    return () => { if (gazeTimerRef.current) { clearInterval(gazeTimerRef.current); gazeTimerRef.current = null; } };
+  }, [gazeState]);
+
+  // ── 쉬는 시간 타이머 ──
+  useEffect(() => {
+    if (!showBreakTimer) return;
+    const t = setInterval(() => setBreakTimeLeft(s => {
+      if (s <= 1) { setShowBreakTimer(false); setBubbleMsg('잘 쉬었어! 다시 읽어볼까? 😊'); setTimeout(() => setBubbleMsg(null), 5000); return 60; }
+      return s - 1;
+    }), 1000);
+    return () => clearInterval(t);
+  }, [showBreakTimer]);
+
+  // ── 페이지별 시간 기록 (리포트용) ──
+  useEffect(() => {
+    if (buddyPageTime > 0 && buddyPageTime % 5 === 0) {
+      setPageTimeMap(prev => ({...prev, [page]: (prev[page] || 0) + 5}));
+    }
+  }, [buddyPageTime, page]);
+
+  const closeBuddyBubble = useCallback(() => setBubbleMsg(null), []);
+
+  // ── 진입 + 목표설정 ──
+  useEffect(() => {
+    if (!loading && pdfDoc) {
+      const t = setTimeout(() => {
+        setBuddyVisible(true);
+        setStartPage(page);
+        setShowGoalPicker(true);
+      }, 800);
+      return () => clearTimeout(t);
+    }
+  }, [loading, pdfDoc]);
+
+  // ── 목표 선택 ──
+  const handleGoalSelect = useCallback((goal) => {
+    setReadingGoal(goal);
+    setShowGoalPicker(false);
+    setBubbleMsg(`좋아! ${goal.pages === Infinity ? '끝까지' : goal.pages + '페이지'} 같이 읽자! ${goal.emoji}`);
+    setTimeout(() => setBubbleMsg(null), 5000);
+  }, []);
+
+  // ── 페이지 넘김 감지 (방향 인식 개선) ──
+  const checkBuddyOnPageChange = useCallback((newPage, prevPage) => {
+    const now = Date.now();
+    const elapsed = now - lastFlipRef.current;
+    lastFlipRef.current = now;
+    const dir = (prevPage !== undefined && newPage > prevPage) ? 'forward' : (prevPage !== undefined ? 'backward' : 'forward');
+    lastFlipDir.current = dir;
+    // 이탈 감지 초기화
+    idleStageRef.current = 0;
+    setBuddyState('reading');
+    if (bubbleMsg) setBubbleMsg(null);
+
+    // 빠른 넘김 (앞으로만 = 건너뛰기 가능, 뒤로 = 복습이므로 무시)
+    if (elapsed < 3000 && dir === 'forward') {
+      setFastFlipCount(c => {
+        const nc = c + 1;
+        if (nc >= 5 && !triggeredRef.current.has('fastflip_'+newPage)) {
+          triggeredRef.current.add('fastflip_'+newPage);
+          setBubbleMsg('혹시 이 부분 어려워? 괜찮아~ 😊');
+          setTimeout(() => setBubbleMsg(null), 5000);
+        }
+        return nc;
+      });
+    } else {
+      setFastFlipCount(0);
+    }
+
+    // 안정적 읽기 (조용히 인정, 말 안 걸기)
+    if (elapsed >= 8000 && elapsed <= 120000) {
+      setSteadyCount(c => c + 1);
+    } else if (elapsed > 120000) {
+      setSteadyCount(0);
+    }
+
+    // 목표 달성 체크
+    const readPages = Math.abs(newPage - startPage);
+    if (readingGoal && readingGoal.pages !== Infinity) {
+      if (readPages >= readingGoal.pages && !triggeredRef.current.has('goal_met')) {
+        triggeredRef.current.add('goal_met');
+        setBuddyState('happy');
+        setBubbleMsg('🎉 목표 달성! ' + readPages + '페이지 읽었어!');
+        setShowConfetti(true);
+        setTimeout(() => { setShowConfetti(false); setBubbleMsg(null); }, 4000);
+      }
+    }
+
+    // 완독
+    if (newPage === totalPages && !triggeredRef.current.has('complete')) {
+      triggeredRef.current.add('complete');
+      setBuddyState('happy');
+      setBubbleMsg('🎉🎉🎉 다 읽었다! 정말 대단해!');
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 4000);
+    }
+  }, [totalPages, startPage, readingGoal, bubbleMsg, closeBuddyBubble]);
+
+  // ── 버디 미니메뉴 액션 ──
+  const handleBuddyAction = useCallback((action) => {
+    setBuddyMenuOpen(false);
+    switch(action) {
+      case 'rest':
+        setBuddyState('sleepy');
+        setBubbleMsg('좋아, 쉬면서 준비되면 다시 읽자! ☕');
+        setShowBreakTimer(true);
+        setBreakTimeLeft(60);
+        break;
+      case 'stretch':
+        setBuddyState('stretch');
+        setShowStretchGuide(true);
+        setBubbleMsg(STRETCH_GUIDES[Math.floor(Math.random() * STRETCH_GUIDES.length)]);
+        break;
+      case 'report':
+        setShowReport(true);
+        break;
+      case 'write':
+        setCapturedPage(captureCurrentPage());
+        setSubMode('write');
+        break;
+    }
+  }, [captureCurrentPage]);
+
+  // ── 테스트 패널 시뮬레이트 핸들러 ──
+  const handleTestSimulate = useCallback((type, val) => {
+    if (!buddyVisible) setBuddyVisible(true);
+    switch(type) {
+      case 'setState':
+        setBuddyState(val);
+        break;
+      case 'goalPicker':
+        setShowGoalPicker(true);
+        break;
+      case 'bubble':
+        setBubbleMsg(val);
+        setTimeout(() => setBubbleMsg(null), 5000);
+        break;
+      case 'gaze':
+        // 시선추적 상태 시뮬레이션
+        setGazeState(val);
+        break;
+      case 'gazeStage': {
+        // 특정 시나리오의 특정 단계 즉시 시뮬레이션
+        const [scenarioKey, stageNum] = val;
+        const scenarios = GAZE_SCENARIOS[scenarioKey];
+        if (!scenarios) break;
+        const scenario = scenarios.find(s => s.stage === stageNum);
+        if (!scenario) break;
+        gazeStageRef.current = stageNum;
+        switch(scenario.action) {
+          case 'bubble': setBubbleMsg(scenario.msg); setTimeout(() => setBubbleMsg(null), 5000); break;
+          case 'bookmark': setBubbleMsg(scenario.msg); break;
+          case 'stretch': setBuddyState('stretch'); setShowStretchGuide(true); setBubbleMsg(scenario.msg); break;
+          case 'break': setBubbleMsg(scenario.msg); setShowBreakTimer(true); setBreakTimeLeft(60); break;
+        }
+        break;
+      }
+      case 'stretch':
+        setBuddyState('stretch');
+        setShowStretchGuide(true);
+        setBubbleMsg(STRETCH_GUIDES[Math.floor(Math.random() * STRETCH_GUIDES.length)]);
+        break;
+      case 'breakTimer':
+        setShowBreakTimer(true);
+        setBreakTimeLeft(60);
+        setBubbleMsg('잠깐 쉬는 시간! 1분만 쉬고 오자 ⏰');
+        break;
+      case 'menu':
+        setBuddyMenuOpen(true);
+        break;
+      case 'goalMet':
+        setBuddyState('happy');
+        setBubbleMsg('🎉 목표 달성! 대단해!');
+        setShowConfetti(true);
+        setTimeout(() => { setShowConfetti(false); setBubbleMsg(null); }, 4000);
+        break;
+      case 'complete':
+        setBuddyState('happy');
+        setBubbleMsg('🎉🎉🎉 다 읽었다! 정말 대단해!');
+        setShowConfetti(true);
+        setTimeout(() => { setShowConfetti(false); }, 4000);
+        break;
+      case 'report':
+        setShowReport(true);
+        break;
+    }
+  }, [buddyVisible]);
+
 
   // ── Pen mode state ──
   const [penMode, setPenMode] = useState(false);
@@ -621,12 +1382,12 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
 
   const goNext = useCallback(() => {
     const step = viewMode === 'spread' ? 2 : 1;
-    setPage(p => Math.min(p + step, totalPages));
-  }, [totalPages, viewMode]);
+    setPage(p => { const np = Math.min(p + step, totalPages); if (np !== p) checkBuddyOnPageChange(np, p); return np; });
+  }, [totalPages, viewMode, checkBuddyOnPageChange]);
   const goPrev = useCallback(() => {
     const step = viewMode === 'spread' ? 2 : 1;
-    setPage(p => Math.max(p - step, 1));
-  }, [viewMode]);
+    setPage(p => { const np = Math.max(p - step, 1); if (np !== p) checkBuddyOnPageChange(np, p); return np; });
+  }, [viewMode, checkBuddyOnPageChange]);
   const hideUI = useCallback(() => setUiVisible(false), []);
   const toggleUI = useCallback(() => setUiVisible(v => !v), []);
   const { dx, handlers } = useSwipe(goNext, goPrev, { onDragStart: hideUI, onTap: toggleUI });
@@ -839,6 +1600,126 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
           </button>
         </div>
       </div>
+
+
+      {/* ─── AI 버디 테스트 패널 ─── */}
+      <BuddyTestPanel
+        open={testPanelOpen}
+        onToggle={() => setTestPanelOpen(v => !v)}
+        buddyState={buddyState}
+        gazeState={gazeState}
+        onSimulate={handleTestSimulate}
+        data={{
+          buddyState, gazeState, gazeStage: gazeStageRef.current,
+          sessionTime: buddySessionTime, pageTime: buddyPageTime,
+          page, totalPages, readPages: Math.abs(page - startPage),
+          goalLabel: readingGoal ? (readingGoal.pages === Infinity ? '끝까지' : readingGoal.pages + 'p') : '미설정',
+          fastFlipCount, steadyCount,
+        }}
+      />
+
+      {/* ─── AI 버디 - 읽기 동반자 시스템 ─── */}
+      {showGoalPicker && (
+        <ReadingGoalOverlay bookTitle={fileName || '도서'} onSelect={handleGoalSelect} />
+      )}
+
+      {showReport && (
+        <ReadingReportCard
+          data={{
+            readPages: Math.abs(page - startPage),
+            totalTime: buddySessionTime,
+            totalPages,
+            goalPages: readingGoal?.pages || Infinity,
+            focusedPages: Object.entries(pageTimeMap).filter(([_,t]) => t >= 15).map(([p]) => Number(p)).sort((a,b)=>a-b),
+            skippedPages: Object.entries(pageTimeMap).filter(([_,t]) => t < 5 && t > 0).map(([p]) => Number(p)),
+          }}
+          onClose={() => setShowReport(false)}
+        />
+      )}
+
+      {/* AI 버디 캐릭터 */}
+      {buddyVisible && (
+        <div className="absolute bottom-[7rem] right-4 z-30" onClick={e => e.stopPropagation()} data-no-swipe="true">
+          {/* 읽기 목표 미니 프로그레스 */}
+          {readingGoal && !bubbleMsg && !buddyMenuOpen && (
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                style={{width:`${Math.min(100, Math.round((Math.abs(page - startPage) / (readingGoal.pages === Infinity ? Math.max(totalPages,1) : readingGoal.pages)) * 100))}%`}} />
+            </div>
+          )}
+
+          {bubbleMsg && (
+            <SpeechBubble message={bubbleMsg} buttons={[]} onButton={() => {}} onClose={closeBuddyBubble}/>
+          )}
+
+          {buddyMenuOpen && (
+            <BuddyMiniMenu
+              onAction={handleBuddyAction}
+              readPages={Math.abs(page - startPage)}
+              goalPages={readingGoal?.pages || Infinity}
+              totalPages={totalPages}
+              onClose={() => setBuddyMenuOpen(false)}
+            />
+          )}
+
+          <div className={`buddy-enter cursor-pointer rounded-full transition-all duration-500 ${buddyState === 'sleepy' ? 'opacity-60' : ''} ${buddyState === 'stretch' ? 'animate-bounce' : ''}`}
+            onClick={() => { if (bubbleMsg) { setBubbleMsg(null); } else { setBuddyMenuOpen(v => !v); } }}>
+            <SquirrelBuddy emotion={buddyState === 'happy' ? 'excited' : buddyState === 'sleepy' ? 'sleepy' : buddyState === 'stretch' ? 'excited' : 'kind'} size={70}/>
+          </div>
+        </div>
+      )}
+
+      {/* 컨페티 */}
+      {showConfetti && <BuddyConfetti/>}
+
+      {/* 스트레칭 가이드 오버레이 */}
+      {showStretchGuide && (
+        <div className="fixed inset-0 z-[90] bg-black/30 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => { setShowStretchGuide(false); setBuddyState('reading'); setGazeState('onText'); }}>
+          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 anim-slide-up text-center" onClick={e => e.stopPropagation()}>
+            <div className="text-6xl mb-4 animate-bounce">🙆</div>
+            <h3 className="font-black text-lg text-gray-800 mb-3">스트레칭 타임!</h3>
+            <div className="space-y-3 mb-5">
+              {STRETCH_GUIDES.slice(0,3).map((guide, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3 bg-green-50 rounded-xl text-left">
+                  <span className="text-2xl">{['1️⃣','2️⃣','3️⃣'][i]}</span>
+                  <span className="text-sm font-bold text-gray-700">{guide}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => { setShowStretchGuide(false); setBuddyState('reading'); setGazeState('onText'); }}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-green-400 to-emerald-400 text-white font-bold shadow active:scale-95 transition">
+              다 했어! 다시 읽을래 📖
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 쉬는 시간 타이머 */}
+      {showBreakTimer && (
+        <div className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xs w-full p-6 anim-slide-up text-center">
+            <div className="text-5xl mb-3">☕</div>
+            <h3 className="font-black text-lg text-gray-800 mb-2">쉬는 시간</h3>
+            <p className="text-sm text-gray-500 mb-4">눈이 피로하면 먼 곳을 바라봐!</p>
+            <div className="relative w-28 h-28 mx-auto mb-4">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#E5E7EB" strokeWidth="8"/>
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#F59E0B" strokeWidth="8"
+                  strokeDasharray={`${2 * Math.PI * 42}`}
+                  strokeDashoffset={`${2 * Math.PI * 42 * (1 - breakTimeLeft / 60)}`}
+                  strokeLinecap="round" className="transition-all duration-1000"/>
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center font-black text-2xl text-amber-600">
+                {breakTimeLeft}
+              </span>
+            </div>
+            <button onClick={() => { setShowBreakTimer(false); setBuddyState('reading'); setGazeState('onText'); setBubbleMsg('좋아! 다시 읽자! 💪'); setTimeout(() => setBubbleMsg(null), 5000); }}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold shadow active:scale-95 transition">
+              다시 읽을래!
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toast notification */}
       {toastMsg && (
@@ -1773,6 +2654,18 @@ function InteractiveViewer({ onExit }) {
    REPORT SYSTEM — 감상문 저장/쓰기/보기
    ══════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════
+   활동툴 감상문쓰기 상수
+   ══════════════════════════════════════ */
+const REVIEW_TYPES = [
+  {id:'feeling',   icon:'💭', label:'내 마음',  color:'from-pink-400 to-rose-400',   bg:'bg-pink-50'},
+  {id:'character', icon:'🎭', label:'주인공',   color:'from-purple-400 to-indigo-400',bg:'bg-purple-50'},
+  {id:'question',  icon:'❓', label:'궁금해',   color:'from-amber-400 to-orange-400', bg:'bg-amber-50'},
+  {id:'doodle',    icon:'🎨', label:'자유 그림',color:'from-emerald-400 to-teal-400', bg:'bg-emerald-50'},
+];
+const REVIEW_STICKERS = ['⭐','❤️','🌈','🌸','✨','🎀','🦋','🍀','🎵','🌻','💎','🎪'];
+const REVIEW_DRAW_COLORS = ['#EF4444','#F97316','#FACC15','#22C55E','#3B82F6','#8B5CF6','#EC4899','#000000','#FFFFFF'];
+
 const REPORTS_KEY = 'bookclub3_reports';
 function loadReports() {
   try { return JSON.parse(localStorage.getItem(REPORTS_KEY) || '[]'); } catch(e) { return []; }
@@ -1786,6 +2679,190 @@ function upsertReport(report) {
 }
 function removeReport(id) { persistReports(loadReports().filter(r => r.id !== id)); }
 function newId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 6); }
+
+/* ══════════════════════════════════════
+   감상문 그리기 캔버스 (독립 컴포넌트)
+   ══════════════════════════════════════ */
+function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
+  const cRef = useRef(null), ctxR = useRef(null), containerR = useRef(null);
+  const drawing = useRef(false), hist = useRef([]);
+  const [histLen, setHistLen] = useState(0);
+  const [color, setColor] = useState('#000000');
+  const [tool, setTool] = useState('pen');
+  const [lineW, setLineW] = useState(4);
+  const [toolbarOpen, setToolbarOpen] = useState(true);
+  const initDone = useRef(false);
+
+  useEffect(() => {
+    const cont = containerR.current;
+    if (!cont) return;
+    const initCanvas = () => {
+      const cv = cRef.current;
+      if (!cv || !cont) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = cont.clientWidth, h = cont.clientHeight;
+      if (w === 0 || h === 0) return;
+      let prevData = null;
+      if (initDone.current) prevData = cv.toDataURL();
+      cv.width = w * dpr; cv.height = h * dpr;
+      cv.style.width = w + 'px'; cv.style.height = h + 'px';
+      const ctx = cv.getContext('2d');
+      ctx.scale(dpr, dpr); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctxR.current = ctx;
+      ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, w, h);
+      if (prevData) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, w, h);
+        img.src = prevData;
+      } else if (initialData) {
+        const img = new Image();
+        img.onload = () => { ctx.drawImage(img, 0, 0, w, h); saveHist(); initDone.current = true; };
+        img.src = initialData;
+      } else {
+        saveHist(); initDone.current = true;
+      }
+    };
+    initCanvas();
+    const ro = new ResizeObserver(() => initCanvas());
+    ro.observe(cont);
+    return () => ro.disconnect();
+  }, []);
+
+  const saveHist = () => {
+    const c = cRef.current; if (!c) return;
+    hist.current.push(c.toDataURL());
+    if (hist.current.length > 30) hist.current.shift();
+    setHistLen(hist.current.length);
+  };
+
+  const undo = () => {
+    if (hist.current.length <= 1) return;
+    hist.current.pop();
+    const last = hist.current[hist.current.length - 1];
+    const img = new Image();
+    img.onload = () => {
+      const c = cRef.current, ctx = ctxR.current, dpr = window.devicePixelRatio || 1;
+      ctx.clearRect(0, 0, c.width / dpr, c.height / dpr);
+      ctx.drawImage(img, 0, 0, c.width / dpr, c.height / dpr);
+      setHistLen(hist.current.length);
+    };
+    img.src = last;
+  };
+
+  const clearCanvas = () => {
+    const c = cRef.current, ctx = ctxR.current;
+    if (!c || !ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, c.width / dpr, c.height / dpr);
+    saveHist();
+  };
+
+  const getPos = (e) => {
+    const r = cRef.current.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: cx - r.left, y: cy - r.top };
+  };
+
+  const handleStart = (e) => {
+    e.preventDefault();
+    drawing.current = true;
+    setToolbarOpen(false);
+    const pos = getPos(e), ctx = ctxR.current;
+    ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
+    ctx.lineWidth = tool === 'eraser' ? lineW * 3 : lineW;
+    ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
+  };
+
+  const handleMove = (e) => {
+    if (!drawing.current) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    ctxR.current.lineTo(pos.x, pos.y);
+    ctxR.current.stroke();
+  };
+
+  const handleEnd = () => {
+    if (drawing.current) { drawing.current = false; saveHist(); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+      <div className="flex items-center justify-between px-3 py-2 bg-white/90 backdrop-blur-sm border-b border-gray-100 shadow-sm z-20">
+        <button onClick={onCancel} className="px-3 py-1.5 rounded-lg bg-gray-100 font-bold text-sm text-gray-600 active:scale-95 transition">← 돌아가기</button>
+        <span className="font-black text-sm text-gray-700">🎨 그리기</span>
+        <button onClick={() => { const c = cRef.current; if (c) onSave(c.toDataURL('image/png')); }}
+          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm shadow active:scale-95 transition">
+          ✅ 완료
+        </button>
+      </div>
+      <div ref={containerR} className="flex-1 relative overflow-hidden bg-white">
+        <canvas ref={cRef} className="absolute inset-0" style={{touchAction:'none'}}
+          onPointerDown={handleStart} onPointerMove={handleMove}
+          onPointerUp={handleEnd} onPointerCancel={handleEnd} />
+
+        {/* 툴바 */}
+        <div className={`absolute left-0 right-0 bottom-0 z-10 transition-transform duration-300 ${toolbarOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+          <div className="bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg px-3 py-2 space-y-1.5 rounded-t-2xl">
+            <div className="flex items-center gap-1.5 justify-center">
+              {REVIEW_DRAW_COLORS.map(c => (
+                <button key={c} onClick={() => { setColor(c); setTool('pen'); }}
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${color === c && tool === 'pen' ? 'scale-110 border-gray-800 shadow-md' : 'border-gray-200'}`}
+                  style={{backgroundColor: c, boxShadow: c === '#FFFFFF' ? 'inset 0 0 0 1px #ddd' : 'none'}} />
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 justify-center">
+              <button onClick={() => setTool('pen')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${tool === 'pen' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                ✏️ 펜
+              </button>
+              <button onClick={() => setTool('eraser')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${tool === 'eraser' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                🧹 지우개
+              </button>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-gray-400">굵기</span>
+                <input type="range" min="2" max="20" value={lineW} onChange={e => setLineW(+e.target.value)} className="w-16 h-1 accent-gray-700" />
+              </div>
+              <button onClick={undo} disabled={histLen <= 1}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold ${histLen > 1 ? 'bg-gray-100 text-gray-600' : 'bg-gray-50 text-gray-300'}`}>
+                ↩
+              </button>
+              <button onClick={clearCanvas} className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-red-50 text-red-500">🗑️</button>
+            </div>
+          </div>
+        </div>
+
+        {/* 툴바 토글 */}
+        <button onPointerDown={e => e.stopPropagation()} onClick={() => setToolbarOpen(v => !v)}
+          className={`absolute z-30 right-3 bg-white shadow-xl rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg active:scale-90 transition-all border-2 border-gray-300 ${toolbarOpen ? 'bottom-[88px]' : 'bottom-4'}`}>
+          {toolbarOpen ? '▼' : '🎨'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════
+   감상문 미리보기 카드 (독립 컴포넌트)
+   ══════════════════════════════════════ */
+function ReviewPreviewCard({bookName, typeInfo, drawingData, stickers, bodyText}) {
+  return (
+    <div className="bg-white rounded-3xl shadow-xl p-6 max-w-sm w-full anim-pop" style={{borderTop:'5px solid #F59E0B'}}>
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-3xl">📖</span>
+        <div>
+          <p className="font-black text-gray-700">{bookName}</p>
+          {typeInfo && <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${typeInfo.color} text-white mt-1`}>{typeInfo.icon} {typeInfo.label}</span>}
+        </div>
+      </div>
+      {drawingData && <img src={drawingData} className="w-full h-40 object-contain rounded-2xl bg-gray-50 mb-3" alt="그림"/>}
+      {stickers.length > 0 && <div className="flex gap-1 mb-3">{stickers.map((s,i) => <span key={i} className="text-2xl">{s}</span>)}</div>}
+      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{bodyText}</p>
+      <p className="text-xs text-gray-400 mt-3">{new Date().toLocaleDateString('ko-KR')}</p>
+    </div>
+  );
+}
 
 /* --- Camera Capture (lightweight, for report writer) --- */
 function CameraCapture({ onCapture, onCancel }) {
@@ -1921,296 +2998,172 @@ function CropModal({ src, onApply, onCancel }) {
 }
 
 
-/* --- Report Writer (활동 툴) --- */
+/* --- Activity Review Writer (활동툴 감상문쓰기 통합) --- */
 function ReportWriter({ bookName, pageImageSrc, onExit, existingReport }) {
   const reportId = useRef(existingReport?.id || newId()).current;
-  const [tab, setTab] = useState('write');
-  const [title, setTitle] = useState(existingReport?.title || '');
+  const [step, setStep] = useState(existingReport?.reviewType ? 3 : 2); // 2:유형선택, 3:작성, 4:미리보기
+  const [reviewType, setReviewType] = useState(existingReport?.reviewType || null);
   const [bodyText, setBodyText] = useState(existingReport?.bodyText || '');
-  const [photos, setPhotos] = useState(existingReport?.photos || []);
-  const [selectedPhotoId, setSelectedPhotoId] = useState(null);
-  const [tool, setTool] = useState('pen');
-  const [penColor, setPenColor] = useState('#000000');
-  const [penSize, setPenSize] = useState(4);
-  const canvasRef = useRef(null);
-  const ctxRef = useRef(null);
-  const workspaceRef = useRef(null);
-  const isDrawing = useRef(false);
-  const historyStack = useRef([]);
-  const [canUndo, setCanUndo] = useState(false);
+  const [drawingData, setDrawingData] = useState(existingReport?.drawingData || null);
+  const [stickers, setStickers] = useState(existingReport?.stickers || []);
+  const [showDrawing, setShowDrawing] = useState(false);
+  const [showPhotoPickerX, setShowPhotoPickerX] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
-  const [showCrop, setShowCrop] = useState(null);
-  const photoFileRef = useRef(null);
-  const [photoDrag, setPhotoDrag] = useState(null);
-  const existingDrawingLoaded = useRef(false);
 
-  const COLORS = ['#000000','#EF4444','#F97316','#EAB308','#22C55E','#3B82F6','#8B5CF6','#EC4899','#FFFFFF'];
+  const typeInfo = reviewType ? REVIEW_TYPES.find(t => t.id === reviewType) : null;
+  const canSave = reviewType && (bodyText.trim().length >= 5 || drawingData);
 
-  /* Canvas setup */
-  const initCanvas = useCallback(() => {
-    const c = canvasRef.current, ws = workspaceRef.current;
-    if (!c || !ws) return;
-    const dpr = window.devicePixelRatio || 1;
-    const w = ws.clientWidth, h = ws.clientHeight;
-    c.width = w * dpr; c.height = h * dpr;
-    c.style.width = w + 'px'; c.style.height = h + 'px';
-    const ctx = c.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctxRef.current = ctx;
-    if (existingReport?.drawingData && !existingDrawingLoaded.current) {
-      existingDrawingLoaded.current = true;
-      const img = new Image();
-      img.onload = () => { ctx.drawImage(img, 0, 0, w, h); pushHist(); };
-      img.src = existingReport.drawingData;
-    } else {
-      pushHist();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (tab === 'decorate') setTimeout(initCanvas, 80);
-  }, [tab, initCanvas]);
-
-  const pushHist = () => {
-    if (!canvasRef.current) return;
-    historyStack.current.push(canvasRef.current.toDataURL());
-    if (historyStack.current.length > 30) historyStack.current.shift();
-    setCanUndo(historyStack.current.length > 1);
-  };
-
-  const undo = () => {
-    if (historyStack.current.length <= 1) return;
-    historyStack.current.pop();
-    const last = historyStack.current[historyStack.current.length - 1];
-    const img = new Image();
-    img.onload = () => {
-      const dpr = window.devicePixelRatio || 1;
-      ctxRef.current.clearRect(0, 0, canvasRef.current.width / dpr, canvasRef.current.height / dpr);
-      ctxRef.current.drawImage(img, 0, 0, canvasRef.current.width / dpr, canvasRef.current.height / dpr);
-    };
-    img.src = last;
-    setCanUndo(historyStack.current.length > 1);
-  };
-
-  /* Drawing handlers */
-  const cPos = (e) => {
-    const r = canvasRef.current.getBoundingClientRect();
-    return { x: (e.clientX || (e.touches && e.touches[0].clientX) || 0) - r.left,
-             y: (e.clientY || (e.touches && e.touches[0].clientY) || 0) - r.top };
-  };
-
-  const onCanvasDown = (e) => {
-    if (tool === 'photo') { setSelectedPhotoId(null); return; }
-    e.preventDefault();
-    const p = cPos(e);
-    if (tool === 'fill') { floodFill(canvasRef.current, ctxRef.current, p.x, p.y, penColor); pushHist(); return; }
-    isDrawing.current = true;
-    const ctx = ctxRef.current;
-    ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : penColor;
-    ctx.lineWidth = tool === 'eraser' ? penSize * 3 : penSize;
-    ctx.beginPath(); ctx.moveTo(p.x, p.y);
-  };
-  const onCanvasMove = (e) => {
-    if (!isDrawing.current) return; e.preventDefault();
-    const p = cPos(e);
-    ctxRef.current.lineTo(p.x, p.y); ctxRef.current.stroke();
-  };
-  const onCanvasUp = () => { if (isDrawing.current) { isDrawing.current = false; pushHist(); } };
-
-  /* Photo import */
-  const importPhoto = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        const max = 800;
-        if (w > max || h > max) { if (w > h) { h = (h/w)*max; w = max; } else { w = (w/h)*max; h = max; } }
-        const c2 = document.createElement('canvas'); c2.width = w; c2.height = h;
-        c2.getContext('2d').drawImage(img, 0, 0, w, h);
-        const np = { id: newId(), src: c2.toDataURL('image/jpeg', 0.8), x: 10, y: 10, w: 40, h: 40*(h/w) };
-        setPhotos(prev => [...prev, np]); setSelectedPhotoId(np.id); setTool('photo');
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file); e.target.value = '';
-  };
-
-  const addCameraPhoto = (dataUrl) => {
-    const np = { id: newId(), src: dataUrl, x: 10, y: 10, w: 40, h: 30 };
-    setPhotos(prev => [...prev, np]); setSelectedPhotoId(np.id); setTool('photo'); setShowCamera(false);
-  };
-
-  /* Photo drag / resize */
-  useEffect(() => {
-    if (!photoDrag) return;
-    const onMove = (e) => {
-      const dx = ((e.clientX - photoDrag.sx) / photoDrag.ww) * 100;
-      const dy = ((e.clientY - photoDrag.sy) / photoDrag.wh) * 100;
-      const sp = photoDrag.sp;
-      setPhotos(prev => prev.map(p => {
-        if (p.id !== photoDrag.pid) return p;
-        if (photoDrag.action === 'move') return { ...p, x: sp.x + dx, y: sp.y + dy };
-        if (photoDrag.action === 'resize') { const nw = Math.max(10, sp.w + dx); return { ...p, w: nw, h: nw * (sp.h / sp.w) }; }
-        return p;
-      }));
-    };
-    const onUp = () => setPhotoDrag(null);
-    window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
-    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); };
-  }, [photoDrag]);
-
-  const startPhotoDrag = (e, photoId, action) => {
-    e.preventDefault(); e.stopPropagation();
-    setSelectedPhotoId(photoId);
-    const ws = workspaceRef.current; if (!ws) return;
-    const wr = ws.getBoundingClientRect();
-    setPhotoDrag({ action, pid: photoId, sx: e.clientX, sy: e.clientY, ww: wr.width, wh: wr.height, sp: { ...photos.find(p => p.id === photoId) } });
-  };
-
-  const deletePhoto = (pid) => { setPhotos(prev => prev.filter(p => p.id !== pid)); if (selectedPhotoId === pid) setSelectedPhotoId(null); };
-  const handleCrop = (croppedSrc) => { setPhotos(prev => prev.map(p => p.id === showCrop ? { ...p, src: croppedSrc } : p)); setShowCrop(null); };
-
-  const addPageImage = () => {
-    if (!pageImageSrc) return;
-    const np = { id: newId(), src: pageImageSrc, x: 5, y: 5, w: 50, h: 38 };
-    setPhotos(prev => [...prev, np]); setSelectedPhotoId(np.id); setTool('photo'); setTab('decorate');
-  };
-
-  /* Save */
+  /* ── 저장 ── */
   const handleSave = () => {
-    const drawingData = canvasRef.current ? canvasRef.current.toDataURL('image/jpeg', 0.5) : null;
-    const thumbnail = canvasRef.current ? canvasRef.current.toDataURL('image/jpeg', 0.15) : null;
     upsertReport({
-      id: reportId, bookName, title, bodyText, photos, drawingData, thumbnail,
+      id: reportId, bookName, reviewType, bodyText, drawingData, stickers,
+      thumbnail: drawingData || null,
+      title: typeInfo ? typeInfo.label + ' 감상문' : '감상문',
       createdAt: existingReport?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
-    setSaved(true); setTimeout(() => setSaved(false), 2000);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); onExit(); }, 1500);
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 shrink-0">
-        <button onClick={onExit} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-base active:scale-95">←</button>
-        <span className="text-sm font-bold text-gray-700">감상문 쓰기</span>
-        <button onClick={handleSave}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${saved ? 'bg-green-500 text-white' : 'bg-blue-500 text-white active:scale-95'}`}>
-          {saved ? '✓ 저장됨' : '💾 저장'}
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-100 shrink-0">
-        <button onClick={() => setTab('write')}
-                className={`flex-1 py-2.5 text-sm font-semibold transition ${tab==='write' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-400'}`}>
-          ✏️ 글쓰기
-        </button>
-        <button onClick={() => setTab('decorate')}
-                className={`flex-1 py-2.5 text-sm font-semibold transition ${tab==='decorate' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-400'}`}>
-          🎨 꾸미기
-        </button>
-      </div>
-
-      {/* Write tab */}
-      {tab === 'write' && (
-        <div className="flex-1 overflow-auto p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-gray-400 shrink-0">📖 {bookName}</span>
-            {pageImageSrc && (
-              <button onClick={addPageImage} className="text-[10px] text-blue-500 underline shrink-0">페이지 이미지를 꾸미기에 추가</button>
-            )}
-          </div>
-          <input value={title} onChange={e => setTitle(e.target.value)}
-                 placeholder="감상문 제목을 입력하세요"
-                 className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-semibold mb-3 focus:outline-none focus:border-blue-400" />
-          <textarea value={bodyText} onChange={e => setBodyText(e.target.value)}
-                    placeholder="책을 읽고 느낀 점을 자유롭게 써보세요..."
-                    className="w-full min-h-[300px] px-3 py-2.5 rounded-lg border border-gray-200 text-sm leading-relaxed resize-none focus:outline-none focus:border-blue-400"
-                    style={{ height: 'calc(100% - 90px)' }} />
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+      {/* 헤더 */}
+      <div className="shrink-0 px-4 py-3 bg-white/90 backdrop-blur-sm shadow-sm z-20">
+        <div className="flex items-center justify-between">
+          <button onClick={onExit} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-base active:scale-95">←</button>
+          <h1 className="font-black text-lg text-gray-700">✏️ 감상문 쓰기</h1>
+          <span className="text-xs text-gray-400">📖 {bookName}</span>
         </div>
-      )}
-
-      {/* Decorate tab */}
-      {tab === 'decorate' && (
-        <>
-          <div ref={workspaceRef} className="flex-1 relative overflow-hidden bg-white" style={{touchAction:'none'}}>
-            {/* Photos layer */}
-            {photos.map(p => (
-              <div key={p.id}
-                   className={`absolute ${tool==='photo' ? 'cursor-move' : 'pointer-events-none'}`}
-                   style={{ left:`${p.x}%`, top:`${p.y}%`, width:`${p.w}%`, height:`${p.h}%` }}>
-                <img src={p.src} className="w-full h-full object-cover rounded shadow" draggable={false}
-                     onPointerDown={e => tool==='photo' && startPhotoDrag(e, p.id, 'move')} />
-                {selectedPhotoId === p.id && tool === 'photo' && (
-                  <>
-                    <div className="absolute inset-0 border-2 border-blue-500 rounded pointer-events-none" />
-                    <div className="absolute -bottom-2.5 -right-2.5 w-6 h-6 bg-blue-500 rounded-full cursor-se-resize z-10 flex items-center justify-center"
-                         onPointerDown={e => startPhotoDrag(e, p.id, 'resize')}>
-                      <span className="text-white text-[10px]">↘</span>
-                    </div>
-                    <button className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-blue-500 text-white text-[10px] rounded-full font-bold z-10 whitespace-nowrap"
-                            onClick={e => { e.stopPropagation(); setShowCrop(p.id); }}>
-                      ✂️ 자르기
-                    </button>
-                    <button className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold z-10"
-                            onClick={e => { e.stopPropagation(); deletePhoto(p.id); }}>
-                      ×
-                    </button>
-                  </>
-                )}
+        {/* 단계 표시 */}
+        <div className="flex items-center gap-2 mt-3">
+          {['🎨 유형', '✍️ 작성', '👀 미리보기'].map((label, i) => {
+            const sn = i + 2;
+            return (
+              <div key={i} className="flex items-center gap-1 flex-1">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${step > sn ? 'bg-green-400 text-white' : step === sn ? 'bg-amber-400 text-white shadow' : 'bg-gray-200 text-gray-400'}`}>
+                  {step > sn ? '✓' : sn - 1}
+                </div>
+                <span className={`text-xs font-bold truncate ${step === sn ? 'text-amber-600' : 'text-gray-400'}`}>{label}</span>
+                {i < 2 && <div className={`flex-1 h-0.5 ${step > sn ? 'bg-green-400' : 'bg-gray-200'}`}/>}
               </div>
-            ))}
-            {/* Drawing canvas */}
-            <canvas ref={canvasRef} className="absolute inset-0"
-                    style={{ touchAction:'none', pointerEvents: tool==='photo' ? 'none' : 'auto' }}
-                    onPointerDown={onCanvasDown} onPointerMove={onCanvasMove}
-                    onPointerUp={onCanvasUp} onPointerCancel={onCanvasUp} />
-          </div>
+            );
+          })}
+        </div>
+      </div>
 
-          {/* Toolbar */}
-          <div className="bg-white border-t border-gray-200 px-3 py-2 shrink-0">
-            <div className="flex items-center gap-1.5 mb-2">
-              {COLORS.map(c => (
-                <button key={c} onClick={() => { setPenColor(c); if(tool==='photo') setTool('pen'); }}
-                        className={`w-7 h-7 rounded-full border-2 transition-transform ${penColor===c && tool!=='photo' ? 'scale-125 border-gray-800' : 'border-gray-200'}`}
-                        style={{ backgroundColor:c, boxShadow: c==='#FFFFFF' ? 'inset 0 0 0 1px #ddd' : 'none' }} />
-              ))}
-              <input type="range" min="2" max="20" value={penSize} onChange={e => setPenSize(+e.target.value)}
-                     className="flex-1 h-1 accent-gray-700 ml-2" />
+      <div className="flex-1 overflow-y-auto">
+        {/* Step 2: 유형 선택 */}
+        {step === 2 && (
+          <div className="p-5 max-w-lg mx-auto">
+            <div className="bg-white rounded-3xl p-6 shadow-lg anim-slide-up">
+              <h3 className="font-black text-xl text-gray-700 mb-5">어떤 감상문을 쓸까요?</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {REVIEW_TYPES.map(type => (
+                  <button key={type.id} onClick={() => { setReviewType(type.id); setStep(3); }}
+                    className={`flex flex-col items-center gap-3 p-6 rounded-2xl transition-all active:scale-95 hover:shadow-xl ${type.bg} border-2 border-transparent hover:border-white`}>
+                    <span className="text-5xl">{type.icon}</span>
+                    <span className="font-black text-gray-700">{type.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {[
-                { id:'pen', icon:'✏️', label:'펜' },
-                { id:'fill', icon:'🪣', label:'채우기' },
-                { id:'eraser', icon:'🧹', label:'지우개' },
-                { id:'photo', icon:'🖼️', label:'사진선택' },
-              ].map(t => (
-                <button key={t.id} onClick={() => setTool(t.id)}
-                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition ${tool===t.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                  {t.icon} {t.label}
+          </div>
+        )}
+
+        {/* Step 3: 작성 */}
+        {step === 3 && (
+          <div className="p-5 max-w-lg mx-auto space-y-4">
+            {/* 선택 정보 */}
+            <div className="bg-white rounded-2xl p-4 shadow flex items-center gap-3 anim-slide-up">
+              <span className="text-3xl">📖</span>
+              <div className="flex-1">
+                <p className="font-bold text-gray-700 text-sm">{bookName}</p>
+                {typeInfo && <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${typeInfo.color} text-white mt-1`}>{typeInfo.icon} {typeInfo.label}</span>}
+              </div>
+              <button onClick={() => setStep(2)} className="text-sm text-gray-400 underline">변경</button>
+            </div>
+
+            {/* 그리기 */}
+            <div className="bg-white rounded-2xl p-5 shadow anim-slide-up" style={{animationDelay:'100ms'}}>
+              <h4 className="font-black text-gray-700 mb-3 flex items-center gap-2">🎨 그림으로 표현하기 <span className="text-xs text-gray-400 font-normal">(선택)</span></h4>
+              {drawingData ? (
+                <div className="relative">
+                  <img src={drawingData} className="w-full h-44 object-contain rounded-xl bg-gray-50" alt="내 그림"/>
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button onClick={() => setShowDrawing(true)} className="px-3 py-1.5 rounded-lg bg-white/90 text-xs font-bold text-gray-600 shadow">✏️ 수정</button>
+                    <button onClick={() => setDrawingData(null)} className="px-3 py-1.5 rounded-lg bg-white/90 text-xs font-bold text-red-500 shadow">🗑️</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setShowDrawing(true)}
+                  className="w-full h-36 rounded-2xl border-3 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-amber-300 hover:text-amber-500 transition active:scale-95">
+                  <span className="text-4xl">🖌️</span><span className="font-bold">터치해서 그림 그리기</span>
                 </button>
-              ))}
-              <button onClick={() => photoFileRef.current?.click()}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-600">📂 불러오기</button>
-              <button onClick={() => setShowCamera(true)}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-gray-100 text-gray-600">📷 카메라</button>
-              <button onClick={undo} disabled={!canUndo}
-                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold ${canUndo ? 'bg-gray-100 text-gray-600' : 'bg-gray-50 text-gray-300'}`}>
-                ↩ 되돌리기
+              )}
+            </div>
+
+            {/* 스티커 */}
+            <div className="bg-white rounded-2xl p-5 shadow anim-slide-up" style={{animationDelay:'200ms'}}>
+              <h4 className="font-black text-gray-700 mb-3 flex items-center gap-2">🎀 스티커 꾸미기 <span className="text-xs text-gray-400 font-normal">(선택)</span></h4>
+              <div className="flex gap-2 flex-wrap">
+                {REVIEW_STICKERS.map(s => (
+                  <button key={s} onClick={() => setStickers(prev => prev.length < 8 ? [...prev, s] : prev)}
+                    className="w-11 h-11 rounded-xl bg-gray-50 flex items-center justify-center text-xl hover:bg-amber-50 hover:scale-110 active:scale-90 transition">{s}</button>
+                ))}
+              </div>
+              {stickers.length > 0 && (
+                <div className="mt-3 flex items-center gap-1 flex-wrap">
+                  <span className="text-sm text-gray-400 mr-1">선택:</span>
+                  {stickers.map((s,i) => (<button key={i} onClick={() => setStickers(prev => prev.filter((_,idx)=>idx!==i))} className="text-2xl hover:opacity-50 transition">{s}</button>))}
+                  <button onClick={() => setStickers([])} className="ml-2 text-xs text-red-400 underline">전체 삭제</button>
+                </div>
+              )}
+            </div>
+
+            {/* 글쓰기 */}
+            <div className="bg-white rounded-2xl p-5 shadow anim-slide-up" style={{animationDelay:'300ms'}}>
+              <h4 className="font-black text-gray-700 mb-3">✍️ 책을 읽고 어떤 생각이 들었나요?</h4>
+              <textarea value={bodyText} onChange={e => setBodyText(e.target.value)}
+                placeholder="책을 읽고 느낀 점을 자유롭게 써보세요..."
+                className="w-full h-32 p-4 border-3 border-amber-200 rounded-xl text-base resize-none focus:outline-none focus:border-amber-400 transition"/>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-xs text-gray-400">{bodyText.length}자</span>
+                <span className="text-xs text-gray-400">글 또는 그림 중 하나는 필수</span>
+              </div>
+            </div>
+
+            {/* 하단 버튼 */}
+            <div className="flex gap-3 pb-6">
+              <button onClick={() => setStep(2)} className="flex-1 py-4 rounded-2xl bg-gray-100 font-bold text-gray-500 active:scale-95 transition">← 이전</button>
+              <button onClick={() => setStep(4)} disabled={!canSave}
+                className={`flex-1 py-4 rounded-2xl font-bold text-white shadow-lg transition-all active:scale-95 ${canSave ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gray-300 cursor-not-allowed'}`}>
+                👀 미리보기 →
               </button>
             </div>
           </div>
-          <input ref={photoFileRef} type="file" accept="image/*" hidden onChange={importPhoto} />
-        </>
-      )}
+        )}
 
-      {showCamera && <CameraCapture onCapture={addCameraPhoto} onCancel={() => setShowCamera(false)} />}
-      {showCrop && (() => { const ph = photos.find(p => p.id === showCrop); return ph ? <CropModal src={ph.src} onApply={handleCrop} onCancel={() => setShowCrop(null)} /> : null; })()}
+        {/* Step 4: 미리보기 */}
+        {step === 4 && (
+          <div className="p-5 flex flex-col items-center gap-5">
+            <h3 className="font-black text-xl text-gray-700 anim-slide-up">미리보기</h3>
+            <ReviewPreviewCard bookName={bookName} typeInfo={typeInfo} drawingData={drawingData} stickers={stickers} bodyText={bodyText} />
+            <div className="flex gap-3 w-full max-w-sm">
+              <button onClick={() => setStep(3)} className="flex-1 py-4 rounded-2xl bg-gray-100 font-bold text-gray-500 active:scale-95 transition">← 수정하기</button>
+              <button onClick={handleSave}
+                className={`flex-1 py-4 rounded-2xl font-bold text-white shadow-lg active:scale-95 transition ${saved ? 'bg-green-500' : 'bg-gradient-to-r from-green-400 to-emerald-500'}`}>
+                {saved ? '✅ 저장 완료!' : '💾 저장하기'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 그리기 캔버스 오버레이 */}
+      {showDrawing && (
+        <ReviewDrawingCanvas initialData={drawingData} onSave={(data) => { setDrawingData(data); setShowDrawing(false); }} onCancel={() => setShowDrawing(false)} />
+      )}
     </div>
   );
 }
