@@ -1140,8 +1140,7 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
       console.log("📚 완독 감지! 모달을 2초 후에 표시합니다.");
       setBuddyState('happy');
       showBubbleMsg('🎉🎉🎉 다 읽었다! 정말 대단해!');
-      setShowConfetti(true);
-      setTimeout(() => setShowCompletionModal(true), 2000);
+      setTimeout(() => { console.log("⏰ 2초 경과, 모달 표시 시도"); setShowCompletionModal(true); }, 2000);
       setTimeout(() => setShowConfetti(false), 4000);
     }
   }, [totalPages, startPage, readingGoal, showBubbleMsg]);
@@ -2644,6 +2643,7 @@ function ReportGallery({ bookName, onExit, onEdit }) {
         </div>
       )}
 
+        {console.log("🎨 완독 모달 렌더링 중, showCompletionModal =", showCompletionModal)}
       {/* 완독 축하 모달 */}
       {showCompletionModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] animate-fade-in">
