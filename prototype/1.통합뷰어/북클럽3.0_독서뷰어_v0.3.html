@@ -1135,10 +1135,11 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
     // 완독
     if (newPage === totalPages && !triggeredRef.current.has('complete')) {
       triggeredRef.current.add('complete');
+      console.log("📚 완독 감지! 모달을 2초 후에 표시합니다.");
       setBuddyState('happy');
       showBubbleMsg('🎉🎉🎉 다 읽었다! 정말 대단해!');
       setShowConfetti(true);
-      setTimeout(() => setShowCompletionModal(true), 4500);
+      setTimeout(() => setShowCompletionModal(true), 2000);
       setTimeout(() => setShowConfetti(false), 4000);
     }
   }, [totalPages, startPage, readingGoal, showBubbleMsg]);
