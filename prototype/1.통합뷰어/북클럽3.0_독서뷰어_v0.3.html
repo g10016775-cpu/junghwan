@@ -597,38 +597,66 @@ function SpeechBubble({ message, buttons, onButton, onClose }) {
 }
 
 /* ══════════════════════════════════════
-   컨페티 이펙트
+   컨페티 이펙트 (계속 떨어지는 버전)
    ══════════════════════════════════════ */
 function BuddyConfetti() {
   const colors = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6EC7','#A855F7','#FFA500','#FF1493','#00CED1','#FFB6C1'];
   const emojis = ['⭐','✨','🎉','🎊','💫','🌟','⚡','💥','🎈','🎀'];
 
-  const pieces = useMemo(() => Array.from({length:80}, (_,i) => {
-    const isEmoji = Math.random() > 0.7; // 30% 확률로 이모지
-    return {
-      id:i,
-      left: Math.random()*100,
-      delay: Math.random()*2,
-      dur: 2+Math.random()*2,
-      color: colors[Math.floor(Math.random()*colors.length)],
-      size: isEmoji ? 20+Math.random()*10 : 6+Math.random()*10,
-      type: isEmoji ? 'emoji' : (Math.random()>0.5?'circle':'rect'),
-      emoji: isEmoji ? emojis[Math.floor(Math.random()*emojis.length)] : null,
-      rotation: Math.random() * 360
+  const [confettis, setConfettis] = useState([]);
+  const nextIdRef = useRef(0);
+
+  // 0.3초마다 새로운 컨페티 배치 추가 (더 자주, 더 많이)
+  useEffect(() => {
+    const addConfetti = () => {
+      const newBatch = Array.from({length: 25}, () => {
+        const isEmoji = Math.random() > 0.7;
+        const dur = 2.5 + Math.random() * 1.5;
+        const id = nextIdRef.current++;
+
+        return {
+          id,
+          left: Math.random() * 100,
+          delay: Math.random() * 0.2,
+          dur,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: isEmoji ? 20 + Math.random() * 10 : 6 + Math.random() * 10,
+          type: isEmoji ? 'emoji' : (Math.random() > 0.5 ? 'circle' : 'rect'),
+          emoji: isEmoji ? emojis[Math.floor(Math.random() * emojis.length)] : null,
+          rotation: Math.random() * 360,
+          createdAt: Date.now()
+        };
+      });
+
+      setConfettis(prev => [...prev, ...newBatch]);
+
+      // 5초 후에 이 배치 제거 (충분한 여유 시간)
+      setTimeout(() => {
+        setConfettis(prev => prev.filter(c => !newBatch.find(b => b.id === c.id)));
+      }, 5000);
     };
-  }), []);
+
+    // 즉시 첫 배치 추가
+    addConfetti();
+
+    // 0.3초마다 새 배치 추가 (더 자주)
+    const interval = setInterval(addConfetti, 300);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[99999] pointer-events-none overflow-hidden">
-      {pieces.map(p => (
+      {confettis.map(p => (
         <div key={p.id} className="confetti absolute" style={{
-          left:`${p.left}%`, top:'-20px',
-          animationDelay:`${p.delay}s`,
-          animationDuration:`${p.dur}s`,
+          left: `${p.left}%`,
+          top: '-20px',
+          animationDelay: `${p.delay}s`,
+          animationDuration: `${p.dur}s`,
           width: p.type === 'emoji' ? 'auto' : p.size,
           height: p.type === 'emoji' ? 'auto' : p.size,
           backgroundColor: p.type === 'emoji' ? 'transparent' : p.color,
-          borderRadius: p.type==='circle'?'50%':'2px',
+          borderRadius: p.type === 'circle' ? '50%' : '2px',
           fontSize: p.type === 'emoji' ? p.size : undefined,
           transform: `rotate(${p.rotation}deg)`
         }}>
@@ -787,10 +815,6 @@ function ReadingReportCard({ data, onClose }) {
               <span className="font-bold text-red-500">{skippedPages.length}페이지</span>
             </div>
           )}
-          <div className="flex items-center justify-between px-4 py-3 bg-purple-50 rounded-xl">
-            <span className="text-sm text-gray-600">📈 평균 속도</span>
-            <span className="font-bold text-purple-600">{avgTime}초/페이지</span>
-          </div>
         </div>
         <div className="mt-4 p-3 bg-amber-50 rounded-xl text-center">
           <span className="text-sm font-bold text-amber-700">
@@ -1029,11 +1053,14 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   const gazeStageRef = useRef(0);
   const bubbleTimeoutRef = useRef(null); // 말풍선 타이머 참조
 
-  // ── 세션 타이머 ──
+  // ── 세션 타이머 (완독/리포트 팝업 시 카운팅 중지) ──
   useEffect(() => {
+    // 완독 팝업이나 리포트가 떠있으면 카운팅 중지
+    if (showCompletionModal || showReport) return;
+
     const t = setInterval(() => setBuddySessionTime(s => s + 1), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [showCompletionModal, showReport]);
 
   // ── 페이지 체류 타이머 ──
   useEffect(() => {
@@ -1321,7 +1348,7 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
         showBubbleMsg('🎉🎉🎉 다 읽었다! 정말 대단해!');
         setShowConfetti(true);
         setShowCompletionModal(true);
-        setTimeout(() => setShowConfetti(false), 5000);
+        // 컨페티는 팝업을 닫거나 버튼을 누를 때까지 계속 표시
         break;
       case 'report':
         setShowReport(true);
@@ -1332,18 +1359,21 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   // ── 완독 후 액션 ──
   const goToQuiz = () => {
     console.log('Going to quiz page');
+    setShowConfetti(false); // 컨페티 중지
     // 독후퀴즈 페이지로 이동
     window.location.href = 'https://dngml0211-beep.github.io/10017073/.proto1.1/pages/quiz.html';
   };
 
   const goToVocabulary = () => {
     console.log('Going to vocabulary challenge');
+    setShowConfetti(false); // 컨페티 중지
     // 어휘챌린지 페이지로 이동
     window.location.href = 'https://dngml0211-beep.github.io/10017073/.proto1.1/pages/vocabulary-challenge.html';
   };
 
   const skipCompletion = () => {
     console.log('Skipping to home page');
+    setShowConfetti(false); // 컨페티 중지
     // 홈으로 돌아가기
     window.location.href = 'https://dngml0211-beep.github.io/10017073/.proto1.1/pages/home.html';
   };
@@ -1987,27 +2017,37 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
       {/* 완독 축하 모달 */}
       {showCompletionModal && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[9999] animate-fade-in p-4 overflow-y-auto">
-          <div className="relative w-full max-w-md mx-auto my-auto" onClick={e => e.stopPropagation()}>
+          <div className="relative w-full max-w-sm mx-auto my-auto" onClick={e => e.stopPropagation()}>
             {/* 닫기 버튼 */}
             <button
-              onClick={() => setShowCompletionModal(false)}
+              onClick={() => { setShowCompletionModal(false); setShowConfetti(false); }}
               className="absolute top-2 right-2 z-50 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
             >
               <span className="text-gray-600 text-2xl font-bold leading-none">×</span>
             </button>
 
-            {/* 반짝이는 별들 (모달 안쪽으로 조정) */}
+            {/* 반짝이는 별들 (풍성하게 많이) */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div className="absolute top-2 left-8 text-2xl animate-sparkle" style={{animationDelay: '0s'}}>✨</div>
               <div className="absolute top-8 right-8 text-xl animate-sparkle" style={{animationDelay: '0.3s'}}>⭐</div>
               <div className="absolute bottom-36 left-12 text-xl animate-sparkle" style={{animationDelay: '0.6s'}}>💫</div>
               <div className="absolute bottom-28 right-10 text-2xl animate-sparkle" style={{animationDelay: '0.9s'}}>✨</div>
               <div className="absolute top-20 left-1/2 text-xl animate-sparkle" style={{animationDelay: '0.4s'}}>🌟</div>
+              <div className="absolute top-12 left-20 text-lg animate-sparkle" style={{animationDelay: '0.2s'}}>⭐</div>
+              <div className="absolute top-32 right-16 text-xl animate-sparkle" style={{animationDelay: '0.5s'}}>✨</div>
+              <div className="absolute bottom-40 right-6 text-lg animate-sparkle" style={{animationDelay: '0.7s'}}>💫</div>
+              <div className="absolute bottom-48 left-6 text-xl animate-sparkle" style={{animationDelay: '0.8s'}}>🌟</div>
+              <div className="absolute top-16 right-20 text-lg animate-sparkle" style={{animationDelay: '1s'}}>⭐</div>
+              <div className="absolute top-40 left-4 text-xl animate-sparkle" style={{animationDelay: '0.35s'}}>✨</div>
+              <div className="absolute bottom-20 left-16 text-lg animate-sparkle" style={{animationDelay: '0.65s'}}>💫</div>
+              <div className="absolute top-24 right-4 text-xl animate-sparkle" style={{animationDelay: '0.45s'}}>🌟</div>
+              <div className="absolute bottom-32 right-24 text-lg animate-sparkle" style={{animationDelay: '0.55s'}}>⭐</div>
+              <div className="absolute top-36 left-24 text-xl animate-sparkle" style={{animationDelay: '0.75s'}}>✨</div>
             </div>
 
             {/* 🎉 완독 배지 */}
-            <div className="text-center mb-3 animate-bounce-in">
-              <div className="relative w-28 h-28 mx-auto">
+            <div className="text-center mb-2 animate-bounce-in">
+              <div className="relative w-24 h-24 mx-auto">
                 {/* 빛나는 원형 배경 */}
                 <div className="absolute inset-0 bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500 rounded-full animate-trophy-glow"></div>
                 {/* 트로피 */}
@@ -2015,43 +2055,50 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
                   <span className="text-5xl">🏆</span>
                 </div>
               </div>
-              <h2 className="text-3xl font-black text-white mt-4 drop-shadow-lg" style={{textShadow: '0 0 20px rgba(255,255,255,0.5)'}}>완독 축하합니다!</h2>
-              <p className="text-white/90 mt-2 text-base font-semibold">책을 끝까지 읽었어요! 🎉</p>
+              <h2 className="text-2xl font-black text-white mt-3 drop-shadow-lg" style={{textShadow: '0 0 20px rgba(255,255,255,0.5)'}}>완독 축하합니다!</h2>
+              <p className="text-white/90 mt-1 text-sm font-semibold">책을 끝까지 읽었어요! 🎉</p>
             </div>
 
             {/* 다음 단계 안내 */}
-            <div className="bg-white/95 rounded-3xl p-5 shadow-2xl animate-slide-up" style={{animationDelay: '0.3s'}}>
+            <div className="bg-white/95 rounded-3xl p-4 shadow-2xl animate-slide-up" style={{animationDelay: '0.3s'}}>
               {/* 📊 독서 리포트 */}
-              <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-4 mb-4 border-2 border-purple-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-2xl animate-bounce">📊</span>
-                  <h3 className="font-black text-base text-gray-800">독서 리포트</h3>
-                  <span className="ml-auto text-lg">🎉</span>
+              <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-3 mb-3 border-2 border-purple-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl animate-bounce">📊</span>
+                  <h3 className="font-black text-sm text-gray-800">독서 리포트</h3>
+                  <span className="ml-auto text-base">🎉</span>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-white/90 rounded-xl p-3 text-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
-                    <div className="text-xl mb-1">⏰</div>
-                    <div className="text-[10px] text-gray-500 mb-1 font-semibold">읽은 시간</div>
-                    <div className="text-xl font-black text-indigo-600">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/90 rounded-xl p-2.5 text-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                    <div className="text-lg mb-1">⏰</div>
+                    <div className="text-[9px] text-gray-500 mb-1 font-semibold">읽은 시간</div>
+                    <div className="text-2xl font-black text-indigo-600">
                       {Math.floor(buddySessionTime / 60)}
                     </div>
-                    <div className="text-[10px] text-gray-400">분</div>
+                    <div className="text-[9px] text-gray-400">분</div>
                   </div>
-                  <div className="bg-white/90 rounded-xl p-3 text-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
-                    <div className="text-xl mb-1">📖</div>
-                    <div className="text-[10px] text-gray-500 mb-1 font-semibold">읽은 페이지</div>
-                    <div className="text-xl font-black text-purple-600">
+                  <div className="bg-white/90 rounded-xl p-2.5 text-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                    <div className="text-lg mb-1">📖</div>
+                    <div className="text-[9px] text-gray-500 mb-1 font-semibold">읽은 페이지</div>
+                    <div className="text-2xl font-black text-purple-600">
                       {totalPages}
                     </div>
-                    <div className="text-[10px] text-gray-400">쪽</div>
+                    <div className="text-[9px] text-gray-400">쪽</div>
                   </div>
-                  <div className="bg-white/90 rounded-xl p-3 text-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
-                    <div className="text-xl mb-1">🚀</div>
-                    <div className="text-[10px] text-gray-500 mb-1 font-semibold">시작 페이지</div>
-                    <div className="text-xl font-black text-pink-600">
+                  <div className="bg-white/90 rounded-xl p-2.5 text-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                    <div className="text-lg mb-1">🚀</div>
+                    <div className="text-[9px] text-gray-500 mb-1 font-semibold">시작 페이지</div>
+                    <div className="text-2xl font-black text-pink-600">
                       {startPage}
                     </div>
-                    <div className="text-[10px] text-gray-400">쪽</div>
+                    <div className="text-[9px] text-gray-400">쪽</div>
+                  </div>
+                  <div className="bg-white/90 rounded-xl p-2.5 text-center shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
+                    <div className="text-lg mb-1">🔥</div>
+                    <div className="text-[9px] text-gray-500 mb-1 font-semibold">집중 구간</div>
+                    <div className="text-xl font-black text-green-600">
+                      1~9p
+                    </div>
                   </div>
                 </div>
               </div>
