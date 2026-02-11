@@ -1141,7 +1141,7 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
       console.log("📚 완독 감지! 모달을 2초 후에 표시합니다.");
       setBuddyState('happy');
       showBubbleMsg('🎉🎉🎉 다 읽었다! 정말 대단해!');
-      setTimeout(() => { console.log("⏰ 2초 경과, 모달 표시 시도"); setShowCompletionModal(true); }, 2000);
+      setShowCompletionModal(true);  // 즉시 표시 (테스트)
       setTimeout(() => setShowConfetti(false), 4000);
     }
   }, [totalPages, startPage, readingGoal, showBubbleMsg]);
