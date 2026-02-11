@@ -1856,6 +1856,58 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
           />
         </div>
       )}
+
+      {/* 완독 축하 모달 */}
+      {showCompletionModal && <div style={{position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "red", zIndex: 99999}}>TEST MODAL</div>}
+      {showCompletionModal && console.log("🎨 완독 모달 렌더링됨!")}
+      {showCompletionModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] animate-fade-in">
+          <div className="relative w-full max-w-md mx-4">
+            {/* 🎉 완독 배지 */}
+            <div className="text-center mb-4 animate-bounce-in">
+              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-2xl">
+                <span className="text-6xl">🏆</span>
+              </div>
+              <h2 className="text-3xl font-black text-white mt-4">완독 축하합니다!</h2>
+              <p className="text-white/80 mt-2">책을 끝까지 읽었어요! 🎉</p>
+            </div>
+
+            {/* 다음 단계 안내 */}
+            <div className="bg-white/95 rounded-3xl p-6 shadow-2xl animate-slide-up" style={{animationDelay: '0.3s'}}>
+              <p className="text-gray-600 text-sm mb-4">다음 단계로 넘어갈까요?</p>
+
+              {/* 독후퀴즈 */}
+              <div className="mb-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl hover:shadow-md transition-all cursor-pointer" onClick={goToQuiz}>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">❓</div>
+                  <div className="flex-1 text-left">
+                    <p className="font-bold text-lg text-gray-800">독후퀴즈</p>
+                    <p className="text-xs text-gray-500">책 내용을 확인해봐요!</p>
+                  </div>
+                  <i className="fas fa-chevron-right text-gray-400"></i>
+                </div>
+              </div>
+
+              {/* 어휘챌린지 */}
+              <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl hover:shadow-md transition-all cursor-pointer" onClick={goToVocabulary}>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">📚</div>
+                  <div className="flex-1 text-left">
+                    <p className="font-bold text-lg text-gray-800">어휘챌린지</p>
+                    <p className="text-xs text-gray-500">새로운 단어를 익혀요!</p>
+                  </div>
+                  <i className="fas fa-chevron-right text-gray-400"></i>
+                </div>
+              </div>
+
+              {/* 나중에 하기 */}
+              <button onClick={skipCompletion} className="w-full text-gray-400 hover:text-gray-600 text-sm underline mt-2 transition">
+                나중에 할게요
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2639,57 +2691,6 @@ function ReportGallery({ bookName, onExit, onEdit }) {
             <div className="flex gap-2">
               <button onClick={() => setConfirmDel(null)} className="flex-1 py-2 rounded-lg bg-gray-100 text-sm text-gray-600 font-semibold">취소</button>
               <button onClick={() => handleDelete(confirmDel)} className="flex-1 py-2 rounded-lg bg-red-500 text-sm text-white font-bold">삭제</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* 완독 축하 모달 */}
-      {showCompletionModal && <div style={{position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "red", zIndex: 99999}}>TEST MODAL</div>}
-      {showCompletionModal && console.log("🎨 완독 모달 렌더링됨!")}
-      {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] animate-fade-in">
-          <div className="relative w-full max-w-md mx-4">
-            {/* 🎉 완독 배지 */}
-            <div className="text-center mb-4 animate-bounce-in">
-              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-2xl">
-                <span className="text-6xl">🏆</span>
-              </div>
-              <h2 className="text-3xl font-black text-white mt-4">완독 축하합니다!</h2>
-              <p className="text-white/80 mt-2">책을 끝까지 읽었어요! 🎉</p>
-            </div>
-
-            {/* 다음 단계 안내 */}
-            <div className="bg-white/95 rounded-3xl p-6 shadow-2xl animate-slide-up" style={{animationDelay: '0.3s'}}>
-              <p className="text-gray-600 text-sm mb-4">다음 단계로 넘어갈까요?</p>
-              
-              {/* 독후퀴즈 */}
-              <div className="mb-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl hover:shadow-md transition-all cursor-pointer" onClick={goToQuiz}>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">❓</div>
-                  <div className="flex-1 text-left">
-                    <p className="font-bold text-lg text-gray-800">독후퀴즈</p>
-                    <p className="text-xs text-gray-500">책 내용을 확인해봐요!</p>
-                  </div>
-                  <i className="fas fa-chevron-right text-gray-400"></i>
-                </div>
-              </div>
-
-              {/* 어휘챌린지 */}
-              <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl hover:shadow-md transition-all cursor-pointer" onClick={goToVocabulary}>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">📚</div>
-                  <div className="flex-1 text-left">
-                    <p className="font-bold text-lg text-gray-800">어휘챌린지</p>
-                    <p className="text-xs text-gray-500">새로운 단어를 익혀요!</p>
-                  </div>
-                  <i className="fas fa-chevron-right text-gray-400"></i>
-                </div>
-              </div>
-
-              {/* 나중에 하기 */}
-              <button onClick={skipCompletion} className="w-full text-gray-400 hover:text-gray-600 text-sm underline mt-2 transition">
-                나중에 할게요
-              </button>
             </div>
           </div>
         </div>
