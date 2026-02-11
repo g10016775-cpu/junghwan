@@ -1332,14 +1332,14 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   // ── 완독 후 액션 ──
   const goToQuiz = () => {
     console.log('Going to quiz page');
-    // 상대 경로로 변경 (.proto1.1 폴더 내에서 작동)
-    window.location.href = 'quiz.html';
+    // 독후퀴즈 페이지로 이동
+    window.location.href = 'https://dngml0211-beep.github.io/10017073/.proto1.1/pages/quiz.html';
   };
 
   const goToVocabulary = () => {
     console.log('Going to vocabulary challenge');
-    // 상대 경로로 변경
-    window.location.href = 'vocabulary-challenge.html';
+    // 어휘챌린지 페이지로 이동
+    window.location.href = 'https://dngml0211-beep.github.io/10017073/.proto1.1/pages/vocabulary-challenge.html';
   };
 
   const skipCompletion = () => {
@@ -1983,8 +1983,16 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
 
       {/* 완독 축하 모달 */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] animate-fade-in p-4 overflow-y-auto">
-          <div className="relative w-full max-w-md mx-auto my-auto">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[9999] animate-fade-in p-4 overflow-y-auto">
+          <div className="relative w-full max-w-md mx-auto my-auto" onClick={e => e.stopPropagation()}>
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setShowCompletionModal(false)}
+              className="absolute top-2 right-2 z-50 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95"
+            >
+              <span className="text-gray-600 text-2xl font-bold leading-none">×</span>
+            </button>
+
             {/* 반짝이는 별들 (모달 안쪽으로 조정) */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <div className="absolute top-2 left-8 text-2xl animate-sparkle" style={{animationDelay: '0s'}}>✨</div>
