@@ -579,7 +579,7 @@ function SpeechBubble({ message, buttons, onButton, onClose }) {
     <div className="bubble-in absolute bottom-full right-0 mb-2 w-64" onClick={e => e.stopPropagation()}>
       <div className="bg-white rounded-2xl shadow-xl p-4 relative" style={{filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.15))'}}>
         <button onClick={onClose} className="absolute top-2 right-2 w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs hover:bg-gray-200">✕</button>
-        <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap pr-5 font-medium">{message}</p>
+        <p className="text-base text-gray-700 leading-relaxed whitespace-pre-wrap pr-5 font-semibold">{message}</p>
         {buttons && buttons.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {buttons.map((b, i) => (
@@ -1927,7 +1927,7 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
               transform: buddyMenuOpen ? 'scale(1.1)' : 'scale(1)',
             }}
             onClick={() => { if (bubbleMsg) { closeBuddyBubble(); } else { setBuddyMenuOpen(v => !v); } }}>
-            <SquirrelBuddy emotion={buddyState === 'happy' ? 'excited' : buddyState === 'sleepy' ? 'sleepy' : buddyState === 'stretch' ? 'excited' : 'kind'} size={90}/>
+            <SquirrelBuddy emotion={buddyState === 'happy' ? 'excited' : buddyState === 'sleepy' ? 'sleepy' : buddyState === 'stretch' ? 'excited' : 'kind'} size={110}/>
           </div>
         </div>
       )}
