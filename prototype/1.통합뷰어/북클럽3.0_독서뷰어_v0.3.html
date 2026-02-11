@@ -2016,8 +2016,13 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
 
       {/* 완독 축하 모달 */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-[9999] animate-fade-in p-4 overflow-y-auto">
-          <div className="relative w-full max-w-sm mx-auto my-auto" onClick={e => e.stopPropagation()}>
+        <>
+          {/* 배경 딤처리 (컨페티 아래) */}
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[9999] animate-fade-in"></div>
+
+          {/* 팝업 컨텐츠 (컨페티 위) */}
+          <div className="fixed inset-0 flex items-center justify-center z-[999999] p-4 overflow-y-auto pointer-events-none">
+            <div className="relative w-full max-w-sm mx-auto my-auto pointer-events-auto" onClick={e => e.stopPropagation()}>
             {/* 닫기 버튼 */}
             <button
               onClick={() => { setShowCompletionModal(false); setShowConfetti(false); }}
@@ -2128,6 +2133,7 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );
