@@ -2429,7 +2429,11 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
   };
 
   const handleEnd = () => {
-    if (drawing.current) { drawing.current = false; saveHist(); }
+    if (drawing.current) {
+      drawing.current = false;
+      saveHist();
+      setToolbarOpen(true); // 그리기 종료 시 툴바 다시 표시
+    }
   };
 
   const insertPhoto = (src) => {
