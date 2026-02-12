@@ -1025,6 +1025,16 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   const renderTask2Ref = useRef(null);
   const autoTimerRef = useRef(null);
 
+  // ── 액티비티(퀴즈/어휘챌린지) 표시 여부 확인 ──
+  const [hasActivities, setHasActivities] = useState(() => {
+    try {
+      const bookData = JSON.parse(sessionStorage.getItem('currentBook') || '{}');
+      return bookData.hasActivities !== false; // 기본값 true (없으면 true로 처리)
+    } catch {
+      return true;
+    }
+  });
+
   // ── AI 버디 - 읽기 동반자 상태 ──
   const [buddyVisible, setBuddyVisible] = useState(false);
   const [buddyState, setBuddyState] = useState('reading'); // reading | happy | sleepy | stretch
@@ -2129,31 +2139,35 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
                 </div>
               </div>
 
-              <p className="text-gray-700 text-sm font-semibold mb-3 text-center">✨ 다음 단계로 넘어갈까요? ✨</p>
+              {hasActivities && <p className="text-gray-700 text-sm font-semibold mb-3 text-center">✨ 다음 단계로 넘어갈까요? ✨</p>}
 
-              {/* 독후퀴즈 */}
-              <div className="mb-2 p-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 rounded-2xl hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer border-2 border-amber-100 animate-slide-up" style={{animationDelay: '0.5s'}} onClick={goToQuiz}>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-amber-200 to-orange-300 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-md">❓</div>
-                  <div className="flex-1 text-left">
-                    <p className="font-black text-lg text-gray-800 mb-0.5">독후퀴즈</p>
-                    <p className="text-xs text-gray-600 font-medium">책 내용을 확인해봐요! 🎯</p>
+              {/* 독후퀴즈 - 홈에서만 표시 */}
+              {hasActivities && (
+                <div className="mb-2 p-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 rounded-2xl hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer border-2 border-amber-100 animate-slide-up" style={{animationDelay: '0.5s'}} onClick={goToQuiz}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-amber-200 to-orange-300 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-md">❓</div>
+                    <div className="flex-1 text-left">
+                      <p className="font-black text-lg text-gray-800 mb-0.5">독후퀴즈</p>
+                      <p className="text-xs text-gray-600 font-medium">책 내용을 확인해봐요! 🎯</p>
+                    </div>
+                    <div className="text-xl">→</div>
                   </div>
-                  <div className="text-xl">→</div>
                 </div>
-              </div>
+              )}
 
-              {/* 어휘챌린지 */}
-              <div className="mb-3 p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 rounded-2xl hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer border-2 border-blue-100 animate-slide-up" style={{animationDelay: '0.7s'}} onClick={goToVocabulary}>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-indigo-300 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-md">📚</div>
-                  <div className="flex-1 text-left">
-                    <p className="font-black text-lg text-gray-800 mb-0.5">어휘챌린지</p>
-                    <p className="text-xs text-gray-600 font-medium">새로운 단어를 익혀요! 💡</p>
+              {/* 어휘챌린지 - 홈에서만 표시 */}
+              {hasActivities && (
+                <div className="mb-3 p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 rounded-2xl hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer border-2 border-blue-100 animate-slide-up" style={{animationDelay: '0.7s'}} onClick={goToVocabulary}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-indigo-300 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-md">📚</div>
+                    <div className="flex-1 text-left">
+                      <p className="font-black text-lg text-gray-800 mb-0.5">어휘챌린지</p>
+                      <p className="text-xs text-gray-600 font-medium">새로운 단어를 익혀요! 💡</p>
+                    </div>
+                    <div className="text-xl">→</div>
                   </div>
-                  <div className="text-xl">→</div>
                 </div>
-              </div>
+              )}
 
               {/* 나중에 하기 */}
               <button onClick={skipCompletion} className="w-full text-gray-400 hover:text-gray-600 text-sm underline mt-2 transition">
