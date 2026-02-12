@@ -2393,6 +2393,29 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
     return () => ro.disconnect();
   }, []);
 
+  // 전역 이벤트 리스너로 그리기 종료 확실하게 감지
+  useEffect(() => {
+    const handleGlobalEnd = () => {
+      if (drawing.current) {
+        drawing.current = false;
+        saveHist();
+        setTimeout(() => setToolbarOpen(true), 50);
+      }
+    };
+
+    document.addEventListener('pointerup', handleGlobalEnd);
+    document.addEventListener('pointercancel', handleGlobalEnd);
+    document.addEventListener('touchend', handleGlobalEnd);
+    document.addEventListener('mouseup', handleGlobalEnd);
+
+    return () => {
+      document.removeEventListener('pointerup', handleGlobalEnd);
+      document.removeEventListener('pointercancel', handleGlobalEnd);
+      document.removeEventListener('touchend', handleGlobalEnd);
+      document.removeEventListener('mouseup', handleGlobalEnd);
+    };
+  }, []);
+
   const saveHist = () => {
     const c = cRef.current; if (!c) return;
     hist.current.push(c.toDataURL());
@@ -2458,13 +2481,14 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
     ctxR.current.stroke();
   };
 
-  const handleEnd = () => {
+  const handleEnd = useCallback(() => {
     if (drawing.current) {
       drawing.current = false;
       saveHist();
-      setToolbarOpen(true); // 그리기 종료 시 툴바 다시 표시
+      // 툴바를 다시 열기 (약간의 지연으로 확실하게)
+      setTimeout(() => setToolbarOpen(true), 50);
     }
-  };
+  }, []);
 
   const insertText = () => {
     if (!textInputValue.trim()) {
