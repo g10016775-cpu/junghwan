@@ -2351,6 +2351,9 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
   const [toolbarOpen, setToolbarOpen] = useState(true);
   const [showPhoto, setShowPhoto] = useState(false);
   const [showGuide, setShowGuide] = useState(!initialData);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInputValue, setTextInputValue] = useState('');
+  const [textPosition, setTextPosition] = useState({ x: 0, y: 0 });
   const initDone = useRef(false);
 
   useEffect(() => {
@@ -2426,9 +2429,20 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
 
   const handleStart = (e) => {
     e.preventDefault();
+    const pos = getPos(e);
+
+    // 텍스트 모드일 때는 텍스트 입력창 표시
+    if (tool === 'text') {
+      setTextPosition(pos);
+      setShowTextInput(true);
+      setToolbarOpen(false);
+      return;
+    }
+
+    // 펜/지우개 모드
     drawing.current = true;
     setToolbarOpen(false);
-    const pos = getPos(e), ctx = ctxR.current;
+    const ctx = ctxR.current;
     ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
     ctx.lineWidth = tool === 'eraser' ? lineW * 3 : lineW;
     ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
@@ -2448,6 +2462,27 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
       saveHist();
       setToolbarOpen(true); // 그리기 종료 시 툴바 다시 표시
     }
+  };
+
+  const insertText = () => {
+    if (!textInputValue.trim()) {
+      setShowTextInput(false);
+      setTextInputValue('');
+      return;
+    }
+
+    const ctx = ctxR.current;
+    if (!ctx) return;
+
+    ctx.font = 'bold 24px "Noto Sans KR", sans-serif';
+    ctx.fillStyle = color;
+    ctx.textBaseline = 'top';
+    ctx.fillText(textInputValue, textPosition.x, textPosition.y);
+
+    saveHist();
+    setShowTextInput(false);
+    setTextInputValue('');
+    setToolbarOpen(true);
   };
 
   const insertPhoto = (src) => {
@@ -2513,6 +2548,10 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${tool === 'pen' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}>
                 ✏️ 펜
               </button>
+              <button onClick={() => setTool('text')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${tool === 'text' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                🔤 텍스트
+              </button>
               <button onClick={() => setTool('eraser')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${tool === 'eraser' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}>
                 🧹 지우개
@@ -2547,6 +2586,34 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
           onSelect={(src) => insertPhoto(src)}
           onCancel={() => setShowPhoto(false)}
         />
+      )}
+
+      {/* 텍스트 입력 모달 */}
+      {showTextInput && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 w-80 max-w-[90%] shadow-2xl animate-scale-up">
+            <h3 className="font-black text-lg text-gray-800 mb-3">✍️ 텍스트 입력</h3>
+            <textarea
+              value={textInputValue}
+              onChange={e => setTextInputValue(e.target.value)}
+              placeholder="입력할 텍스트를 작성하세요..."
+              className="w-full h-24 p-3 border-2 border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:border-amber-400 transition"
+              autoFocus
+            />
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => { setShowTextInput(false); setTextInputValue(''); setToolbarOpen(true); }}
+                className="flex-1 py-2.5 rounded-lg bg-gray-100 font-bold text-gray-600 text-sm active:scale-95 transition">
+                취소
+              </button>
+              <button
+                onClick={insertText}
+                className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 font-bold text-white text-sm shadow active:scale-95 transition">
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -2720,7 +2787,7 @@ function ReportWriter({ bookName, pageImageSrc, onExit, existingReport }) {
   const [saved, setSaved] = useState(false);
 
   const typeInfo = reviewType ? REVIEW_TYPES.find(t => t.id === reviewType) : null;
-  const canSave = reviewType && (bodyText.trim().length >= 5 || drawingData);
+  const canSave = reviewType && drawingData; // 유형 선택 + 그림 필수
 
   /* ── 저장 ── */
   const handleSave = () => {
@@ -2795,7 +2862,7 @@ function ReportWriter({ bookName, pageImageSrc, onExit, existingReport }) {
 
             {/* 그리기 */}
             <div className="bg-white rounded-2xl p-5 shadow anim-slide-up" style={{animationDelay:'100ms'}}>
-              <h4 className="font-black text-gray-700 mb-3 flex items-center gap-2">🎨 그림으로 표현하기 <span className="text-xs text-gray-400 font-normal">(선택)</span></h4>
+              <h4 className="font-black text-gray-700 mb-3 flex items-center gap-2">🎨 그림으로 표현하기 <span className="text-xs text-red-500 font-bold">(필수)</span></h4>
               {drawingData ? (
                 <div className="relative">
                   <img src={drawingData} className="w-full h-44 object-contain rounded-xl bg-gray-50" alt="내 그림"/>
@@ -2830,17 +2897,6 @@ function ReportWriter({ bookName, pageImageSrc, onExit, existingReport }) {
               )}
             </div>
 
-            {/* 글쓰기 */}
-            <div className="bg-white rounded-2xl p-5 shadow anim-slide-up" style={{animationDelay:'300ms'}}>
-              <h4 className="font-black text-gray-700 mb-3">✍️ 책을 읽고 어떤 생각이 들었나요?</h4>
-              <textarea value={bodyText} onChange={e => setBodyText(e.target.value)}
-                placeholder="책을 읽고 느낀 점을 자유롭게 써보세요..."
-                className="w-full h-32 p-4 border-3 border-amber-200 rounded-xl text-base resize-none focus:outline-none focus:border-amber-400 transition"/>
-              <div className="flex justify-between items-center mt-1">
-                <span className="text-xs text-gray-400">{bodyText.length}자</span>
-                <span className="text-xs text-gray-400">글 또는 그림 중 하나는 필수</span>
-              </div>
-            </div>
 
             {/* 하단 버튼 */}
             <div className="flex gap-3 pb-6">
