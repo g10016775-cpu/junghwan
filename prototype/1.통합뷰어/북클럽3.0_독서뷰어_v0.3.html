@@ -2361,6 +2361,16 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
   const [textPosition, setTextPosition] = useState({ x: 0, y: 0 });
   const initDone = useRef(false);
 
+  // 그리기 상태 감시 - 그리기가 끝나면 툴바 자동 열기
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!drawing.current && !toolbarOpen && !showTextInput) {
+        setToolbarOpen(true);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [toolbarOpen, showTextInput]);
+
   useEffect(() => {
     const cont = containerR.current;
     if (!cont) return;
@@ -2465,10 +2475,10 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
     if (drawing.current) {
       drawing.current = false;
       saveHist();
-      // 다음 프레임에서 툴바 열기 (확실한 상태 업데이트)
-      requestAnimationFrame(() => {
-        setToolbarOpen(true);
-      });
+      // 즉시 툴바 열기
+      setToolbarOpen(true);
+      // 백업: 100ms 후에도 한번 더 열기
+      setTimeout(() => setToolbarOpen(true), 100);
     }
   };
 
