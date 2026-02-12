@@ -2394,29 +2394,6 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
     return () => ro.disconnect();
   }, []);
 
-  // 전역 이벤트 리스너로 그리기 종료 확실하게 감지
-  useEffect(() => {
-    const handleGlobalEnd = () => {
-      if (drawing.current) {
-        drawing.current = false;
-        saveHist();
-        setTimeout(() => setToolbarOpen(true), 50);
-      }
-    };
-
-    document.addEventListener('pointerup', handleGlobalEnd);
-    document.addEventListener('pointercancel', handleGlobalEnd);
-    document.addEventListener('touchend', handleGlobalEnd);
-    document.addEventListener('mouseup', handleGlobalEnd);
-
-    return () => {
-      document.removeEventListener('pointerup', handleGlobalEnd);
-      document.removeEventListener('pointercancel', handleGlobalEnd);
-      document.removeEventListener('touchend', handleGlobalEnd);
-      document.removeEventListener('mouseup', handleGlobalEnd);
-    };
-  }, []);
-
   const saveHist = () => {
     const c = cRef.current; if (!c) return;
     hist.current.push(c.toDataURL());
@@ -2482,14 +2459,16 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
     ctxR.current.stroke();
   };
 
-  const handleEnd = useCallback(() => {
+  const handleEnd = () => {
     if (drawing.current) {
       drawing.current = false;
       saveHist();
-      // 툴바를 다시 열기 (약간의 지연으로 확실하게)
-      setTimeout(() => setToolbarOpen(true), 50);
+      // 다음 프레임에서 툴바 열기 (확실한 상태 업데이트)
+      requestAnimationFrame(() => {
+        setToolbarOpen(true);
+      });
     }
-  }, []);
+  };
 
   const insertText = () => {
     if (!textInputValue.trim()) {
@@ -2550,7 +2529,8 @@ function ReviewDrawingCanvas({initialData, onSave, onCancel}) {
       <div ref={containerR} className="flex-1 relative overflow-hidden bg-white">
         <canvas ref={cRef} className="absolute inset-0" style={{touchAction:'none'}}
           onPointerDown={handleStartWrap} onPointerMove={handleMove}
-          onPointerUp={handleEnd} onPointerCancel={handleEnd} />
+          onPointerUp={handleEnd} onPointerCancel={handleEnd}
+          onTouchEnd={handleEnd} onMouseUp={handleEnd} />
 
         {/* 안내 문구 오버레이 */}
         {showGuide && (
