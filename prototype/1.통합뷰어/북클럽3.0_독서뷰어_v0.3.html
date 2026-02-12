@@ -834,7 +834,10 @@ function ReadingReportCard({ data, onClose }) {
    시나리오 테스트 패널 (새 버디 시스템)
    ══════════════════════════════════════ */
 function BuddyTestPanel({ open, onToggle, buddyState, gazeState, onSimulate, data }) {
-  if (!open) return (
+  // iframe 내부에서는 버튼 숨김 (외부 헤더에서 제어)
+  const isInIframe = window.parent !== window;
+
+  if (!open) return isInIframe ? null : (
     <button onClick={onToggle} className="fixed top-2 left-16 z-[80] px-3 py-1.5 rounded-lg bg-green-600/90 text-white text-xs font-bold backdrop-blur-sm hover:bg-green-500 transition" data-no-swipe="true">
       ● 챗봇 테스트 모드
     </button>
@@ -1052,6 +1055,20 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
   const gazeTimerRef = useRef(null);
   const gazeStageRef = useRef(0);
   const bubbleTimeoutRef = useRef(null); // 말풍선 타이머 참조
+
+  // ── 부모 윈도우로부터 메시지 수신 ──
+  useEffect(() => {
+    const handleMessage = (event) => {
+      const { type, data } = event.data;
+      if (type === 'TOGGLE_UI') {
+        setUiVisible(v => !v);
+      } else if (type === 'TOGGLE_BUDDY_TEST_PANEL') {
+        setTestPanelOpen(v => !v);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // ── 세션 타이머 (완독/리포트 팝업 시 카운팅 중지) ──
   useEffect(() => {
@@ -1358,17 +1375,17 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
 
   // ── 완독 후 액션 ──
   const goToQuiz = () => {
-    console.log('Going to quiz page');
-    setShowConfetti(false); // 컨페티 중지
-    // 독후퀴즈 페이지로 이동
-    window.location.href = 'https://dngml0211-beep.github.io/10017073/.proto1.1/pages/quiz.html';
+    setShowConfetti(false);
+    // iframe 안에 있으면 부모 윈도우를 변경, 아니면 현재 윈도우 변경
+    const targetWindow = window.parent !== window ? window.parent : window;
+    targetWindow.location.href = '../../../.proto1.1/pages/quiz.html';
   };
 
   const goToVocabulary = () => {
-    console.log('Going to vocabulary challenge');
-    setShowConfetti(false); // 컨페티 중지
-    // 어휘챌린지 페이지로 이동
-    window.location.href = 'https://dngml0211-beep.github.io/10017073/.proto1.1/pages/vocabulary-challenge.html';
+    setShowConfetti(false);
+    // iframe 안에 있으면 부모 윈도우를 변경, 아니면 현재 윈도우 변경
+    const targetWindow = window.parent !== window ? window.parent : window;
+    targetWindow.location.href = '../../../.proto1.1/pages/vocabulary-challenge.html';
   };
 
   const skipCompletion = () => {
@@ -1665,6 +1682,16 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
     return () => clearInterval(autoTimerRef.current);
   }, [autoPlay, autoSpeed, totalPages, viewMode, loading]);
 
+  // Notify parent window when UI visibility changes
+  useEffect(() => {
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'UI_VISIBILITY_CHANGED',
+        data: { visible: uiVisible }
+      }, '*');
+    }
+  }, [uiVisible]);
+
   // Ensure odd page in spread mode
   const handleViewModeChange = useCallback((mode) => {
     if (mode === 'spread') {
@@ -1757,10 +1784,12 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
         />
       )}
 
-      {/* 나가기 버튼 (고정 위치) */}
-      <button onClick={e => { e.stopPropagation(); onExit(); }}
-              className="fixed top-2 left-2 z-[90] w-12 h-9 rounded-lg bg-gray-800/90 backdrop-blur-sm hover:bg-gray-700 text-white flex items-center justify-center text-xl font-bold active:scale-95 transition-all shadow-lg"
-              data-no-swipe="true">←</button>
+      {/* 나가기 버튼 (고정 위치) - iframe 내부에서는 숨김 */}
+      {window.parent === window && (
+        <button onClick={e => { e.stopPropagation(); onExit(); }}
+                className="fixed top-2 left-2 z-[90] w-12 h-9 rounded-lg bg-gray-800/90 backdrop-blur-sm hover:bg-gray-700 text-white flex items-center justify-center text-xl font-bold active:scale-95 transition-all shadow-lg"
+                data-no-swipe="true">←</button>
+      )}
 
       {/* Top bar */}
       <div className={`absolute top-0 inset-x-0 z-20 transition-all duration-300
@@ -1999,7 +2028,7 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
           <ReportWriter
             bookName={fileName}
             pageImageSrc={capturedPage}
-            onExit={() => setSubMode(null)}
+            onExit={() => { setSubMode(null); setUiVisible(true); }}
             existingReport={editingReport}
           />
         </div>
@@ -2008,7 +2037,7 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
         <div className="absolute inset-0 z-40" onClick={e => e.stopPropagation()}>
           <ReportGallery
             bookName={fileName}
-            onExit={() => setSubMode(null)}
+            onExit={() => { setSubMode(null); setUiVisible(true); }}
             onEdit={handleEditFromGallery}
           />
         </div>
