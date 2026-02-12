@@ -1311,8 +1311,10 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
         setShowReport(true);
         break;
       case 'write':
-        setCapturedPage(captureCurrentPage());
-        setSubMode('write');
+        // 감상문 작성 전용 페이지로 이동
+        sessionStorage.setItem('referrer', window.location.href);
+        const targetWindow = window.parent !== window ? window.parent : window;
+        targetWindow.location.href = '../../북클럽3.0_감상문작성.html';
         break;
     }
   }, [captureCurrentPage, showBubbleMsg]);
