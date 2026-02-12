@@ -1314,7 +1314,8 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
         // 감상문 작성 전용 페이지로 이동
         sessionStorage.setItem('referrer', window.location.href);
         const targetWindow = window.parent !== window ? window.parent : window;
-        targetWindow.location.href = '../../북클럽3.0_감상문작성.html';
+        // iframe에서 실행될 때 parent 기준 경로로 수정
+        targetWindow.location.href = '../../북클럽3.0_통합뷰어/prototype/북클럽3.0_감상문작성.html';
         break;
     }
   }, [captureCurrentPage, showBubbleMsg]);
@@ -1437,7 +1438,8 @@ function PDFBookViewer({ fileData, fileName, onExit }) {
     // 감상문 작성 전용 페이지로 이동 (통일된 경험 제공)
     sessionStorage.setItem('referrer', window.location.href);
     const targetWindow = window.parent !== window ? window.parent : window;
-    targetWindow.location.href = '../../북클럽3.0_감상문작성.html';
+    // iframe에서 실행될 때 parent 기준 경로로 수정
+    targetWindow.location.href = '../../북클럽3.0_통합뷰어/prototype/북클럽3.0_감상문작성.html';
   }, []);
 
   const handleOpenGallery = useCallback(() => {
